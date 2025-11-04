@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: eureka-server
+  cloud:
+    config:
+      uri: http://localhost:8888
+      fail-fast: false
+      label: main
+  config:
+    import: optional:configserver:http://localhost:8888
