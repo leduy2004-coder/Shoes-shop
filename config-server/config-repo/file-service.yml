@@ -1,52 +1,20 @@
-spring:
-  application:
-    name: file-service
-
-  minio:
-    url: ${MINIO_URL:http://minio:9000}
-    access-key: ${MINIO_ACCESS_KEY:admin}
-    bucket: ${MINIO_BUCKET:five-cu-data}
-    secret-key: ${MINIO_SECRET_KEY:fivecu@123!@#}
-    bucket-name: five-cu
-    path:
-      staff: staff
-      common: common
-      content: content
-
-  servlet:
-    multipart:
-      max-file-size: 20MB
-      max-request-size: 20MB
-
-  datasource:
-    url: jdbc:mysql://localhost:3306/five_cu?useUnicode=yes&characterEncoding=UTF-8
-    username: root
-    password: 123456
-    driver-class-name: com.mysql.cj.jdbc.Driver
-
-  jpa:
-    properties:
-      hibernate:
-        format_sql: true
-    show-sql: true
-    hibernate:
-      ddl-auto: update
-    open-in-view: false
-
-
 server:
   port: 8082
-eureka:
-  client:
-    region: default
-    registryFetchIntervalSeconds: 5
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
 
-feign:
-  client:
-    config:
-      default:
-        connectTimeout: 600000
-        readTimeout: 100000
+minio:
+  endpoint: http://localhost:9000
+  access-key: admin
+  secret-key: admin@2024
+  bucket-name: resources
+spring:
+  servlet:
+    multipart:
+      max-file-size: 40MB
+      max-request-size: 40MB
+  cache:
+    type: redis
+
+  data:
+    mongodb:
+      uri: mongodb://root:abc123456@localhost:27017/file-service?authSource=admin
 
