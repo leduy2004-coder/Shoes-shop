@@ -34,8 +34,6 @@ services:
       - ./config:/opt/bitnami/minio/config
     ports:
       - '9000:9000'
-      - '9001:9001'
-    command: minio server /bitnami/minio/data --console-address ":9001"
 
 
 volumes:

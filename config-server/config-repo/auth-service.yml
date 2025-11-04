@@ -1,38 +1,48 @@
 server:
   port: 8081
+  servlet:
+    context-path: /auth
 
 spring:
-  application:
-    name: auth-service
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+  cache:
+    type: redis
+
+  data:
+    mongodb:
+      uri: mongodb://root:abc123456@localhost:27017/auth-service?authSource=admin
+    redis:
+      host: localhost
+      port: 6379
+      repositories:
+        enabled: false
+      ssl:
+        enabled: false
+
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
     properties:
       hibernate:
         format_sql: true
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: maidanghung123@gmail.com
-    password: tryczhucvaaqhuhw
-    protocol: smtp
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true
-  jackson:
-    serialization:
-      fail-on-empty-beans: false
+    defer-datasource-initialization: true
+    open-in-view: false
 
-  datasource:
-    url: jdbc:mysql://localhost:3306/five_cu?useUnicode=yes&characterEncoding=UTF-8&serverTimezone=UTC
-    username: root
-    password: 123456
-    driver-class-name: com.mysql.cj.jdbc.Driver
+  application:
+    security:
+      jwt:
+        secret-key: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+        expiration: 3600000     # 1 h in milliseconds
+        refresh-token:
+          expiration: 604800000 # 7 days in milliseconds
+  security:
+    oauth2:
+      resource server:
+        jwt:
+          issuer-uri: http://localhost:8080/issuer
 
 eureka:
   client:
@@ -41,7 +51,3 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
 
-mail:
-  from: maidanghung123@gmail.com
-  service:
-    name: 5CU
