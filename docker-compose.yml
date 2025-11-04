@@ -1,0 +1,45 @@
+name: shoes-shop
+services:
+
+  mongodb:
+    image: bitnami/mongodb:latest
+    container_name: mongodb-broker
+    environment:
+      - MONGODB_ROOT_PASSWORD=abc123456 # Đặt mật khẩu root cho MongoDB
+      - MONGODB_USER=user # Đặt tên người dùng cho MongoDB
+      - MONGODB_PASSWORD=ad123456 # Đặt mật khẩu cho người dùng MongoDB
+      - MONGODB_DATABASE=cloud  # Đặt database mặc định
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb-data:/bitnami/mongodb/data
+
+  redis:
+    image: redis:7.2
+    container_name: redis-broker
+    command: [ "redis-server" ]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin@2024
+    volumes:
+      - ./data:/bitnami/minio/data
+      - ./config:/opt/bitnami/minio/config
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    command: minio server /bitnami/minio/data --console-address ":9001"
+
+
+volumes:
+  mongodb-data:
+    driver: local
+  redis-data:
+    driver: local
