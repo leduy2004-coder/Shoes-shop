@@ -28,6 +28,10 @@ public class UserEntity extends BaseEntity {
 
     String nickName;
 
+    String phone;
+
+    String address;
+
     String email;
 
     @DBRef

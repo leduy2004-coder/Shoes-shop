@@ -10,6 +10,7 @@
         <option value="$PROJECT_DIR$/auth-service/pom.xml" />
         <option value="$PROJECT_DIR$/file-service/pom.xml" />
         <option value="$PROJECT_DIR$/common-dto/pom.xml" />
+        <option value="$PROJECT_DIR$/shoes-service/pom.xml" />
       </list>
     </option>
   </component>
