@@ -33,11 +33,11 @@ spring:
             - StripPrefix=2
             - AddRequestHeader=X-Gateway, API-Gateway
 
-        # PRODUCT-SERVICE
-        - id: product-service
-          uri: lb://product-service
+        # SHOES-SERVICE
+        - id: shoes-service
+          uri: lb://shoes-service
           predicates:
-            - Path=/api/v1/product/**
+            - Path=/api/v1/shoes/**
           filters:
             - StripPrefix=2
             - AddRequestHeader=X-Gateway, API-Gateway

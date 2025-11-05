@@ -22,15 +22,6 @@ spring:
       ssl:
         enabled: false
 
-  jpa:
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        format_sql: true
-    defer-datasource-initialization: true
-    open-in-view: false
-
   application:
     security:
       jwt:
