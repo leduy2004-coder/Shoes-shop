@@ -13,4 +13,5 @@ import lombok.experimental.FieldDefaults;
 public class BrandGetResponse {
     String id;
     String name;
+    String logo;
 }
