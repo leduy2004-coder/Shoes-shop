@@ -24,7 +24,7 @@ spring:
             - StripPrefix=2
             - AddRequestHeader=X-Gateway, API-Gateway
 
-        # USER-SERVICE
+        # FILE-SERVICE
         - id: file-service
           uri: lb://file-service
           predicates:

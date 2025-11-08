@@ -1,6 +1,5 @@
-package com.java.auth_service.dto.response;
+package com.java.auth_service.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -9,14 +8,13 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @Getter
 @Setter
+@Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserResponse{
+public class UserUpdateRequest {
     String id;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
-    RoleResponse roles;
     String name;
     String phone;
     String address;
-    String email;
+    Boolean status;
 }

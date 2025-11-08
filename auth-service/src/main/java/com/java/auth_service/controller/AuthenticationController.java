@@ -4,6 +4,7 @@ import com.java.IntrospectRequest;
 import com.java.IntrospectResponse;
 import com.java.auth_service.dto.ApiResponse;
 import com.java.auth_service.dto.request.AuthenticationRequest;
+import com.java.auth_service.dto.request.UserRequest;
 import com.java.auth_service.dto.response.AuthenticationResponse;
 import com.java.auth_service.service.security.AuthenticationService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -21,13 +21,20 @@ import java.io.IOException;
 @RestController
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@RequestMapping("/auth2")
 public class AuthenticationController {
 
     AuthenticationService service;
 
 
-    @PostMapping("/authenticate")
+    @PostMapping("/register")
+    public ApiResponse<AuthenticationResponse> register(
+            @RequestBody UserRequest request
+    ) {
+        return ApiResponse.<AuthenticationResponse>builder().result(service.register(request)).build();
+    }
+
+
+    @PostMapping("/login")
     public ApiResponse<AuthenticationResponse> authenticate(
             @RequestBody AuthenticationRequest request
     ) {
@@ -38,7 +45,7 @@ public class AuthenticationController {
         var result = service.introspect(request);
         return ApiResponse.<IntrospectResponse>builder().result(result).build();
     }
-    @PostMapping("/refresh-token")
+    @PostMapping("/refresh")
     public ApiResponse<AuthenticationResponse> refreshToken(
             HttpServletRequest request,
             HttpServletResponse response

@@ -17,16 +17,13 @@ import java.util.List;
 @Document(collection = "users")
 public class UserEntity extends BaseEntity {
 
-    @Field(name = "username")
-    String username;
-
     @Field(name = "password")
     String password;
 
     @Field(name = "status")
     Boolean status;
 
-    String nickName;
+    String name;
 
     String phone;
 
@@ -35,5 +32,5 @@ public class UserEntity extends BaseEntity {
     String email;
 
     @DBRef
-    List<RoleEntity> roles;
+    RoleEntity role;
 }

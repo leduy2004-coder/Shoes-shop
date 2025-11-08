@@ -20,15 +20,6 @@ import java.util.List;
 @RequestMapping("/users")
 public class UserController {
     UserService userService;
-    AuthenticationService service;
-
-    @PostMapping("/register")
-    public ApiResponse<AuthenticationResponse> register(
-            @RequestBody UserRequest request
-    ) {
-        return ApiResponse.<AuthenticationResponse>builder().result(service.register(request)).build();
-    }
-
 
     @GetMapping("/get-all")
     public ApiResponse<List<UserResponse>> findAll() {

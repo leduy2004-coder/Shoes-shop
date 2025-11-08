@@ -1,8 +1,8 @@
 package com.java.auth_service.controller.internal;
 
 
-import com.java.ProfileGetResponse;
 import com.java.auth_service.dto.ApiResponse;
+import com.java.auth_service.dto.response.UserResponse;
 import com.java.auth_service.service.UserService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -19,9 +19,9 @@ public class InternalUserProfileController {
     UserService userService;
 
     @GetMapping("/internal/users/{userId}")
-    ApiResponse<ProfileGetResponse> getProfile(@PathVariable String userId) {
-        return ApiResponse.<ProfileGetResponse>builder()
-                .result(userService.getProfile(userId))
+    ApiResponse<UserResponse> getProfile(@PathVariable String userId) {
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.findById(userId))
                 .build();
     }
 }
