@@ -3,13 +3,20 @@ package com.java.shoes_service.controller;
 
 import com.java.shoes_service.dto.ApiResponse;
 import com.java.shoes_service.dto.PageResponse;
-import com.java.shoes_service.dto.product.ProductGetResponse;
+import com.java.shoes_service.dto.product.product.ProductCreateRequest;
+import com.java.shoes_service.dto.product.product.ProductCreateResponse;
+import com.java.shoes_service.dto.product.product.ProductGetDetailResponse;
+import com.java.shoes_service.dto.product.product.ProductGetResponse;
 import com.java.shoes_service.service.ProductService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -30,10 +37,10 @@ public class ProductController {
                 .build();
     }
 
-    @GetMapping("/{id}")
-    public ApiResponse<ProductGetResponse> getDetailProductById(@PathVariable("id") String productId) {
-        ProductGetResponse response = productService.getProductById(productId);
-        return ApiResponse.<ProductGetResponse>builder()
+    @GetMapping("/get-by-id/{id}")
+    public ApiResponse<ProductGetDetailResponse> getDetailProductById(@PathVariable("id") String productId) {
+        ProductGetDetailResponse response = productService.getProductById(productId);
+        return ApiResponse.<ProductGetDetailResponse>builder()
                 .result(response)
                 .build();
     }
@@ -41,7 +48,7 @@ public class ProductController {
     @GetMapping("/search")
     public ApiResponse<PageResponse<ProductGetResponse>> searchProducts(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int page_size,
+            @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false, name = "brand_id") String brandId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String name,
@@ -52,62 +59,23 @@ public class ProductController {
             @RequestParam(required = false, name = "sort_order") String sortOrder
     ) {
         PageResponse<ProductGetResponse> response = productService.searchProducts(
-                page, page_size, brandId, status, name, minPrice, maxPrice, categoryId, sortBy, sortOrder
+                page, size, brandId, status, name, minPrice, maxPrice, categoryId, sortBy, sortOrder
         );
         return ApiResponse.<PageResponse<ProductGetResponse>>builder()
                 .result(response)
                 .build();
     }
 
-//    @GetMapping(value = "/get-my-products")
-//    public ApiResponse<PageResponse<ProductGetResponse>> getMyProduct(@RequestParam(defaultValue = "1") int page,
-//                                                                      @RequestParam(defaultValue = "10") int size
-//    ) {
-//
-//        PageResponse<ProductGetResponse> response = productService.getMyProducts(page, size);
-//
-//        return ApiResponse.<PageResponse<ProductGetResponse>>builder()
-//                .result(response)
-//                .build();
-//    }
-//    @GetMapping(value = "/get-products-by-user/{userId}")
-//    public ApiResponse<PageResponse<ProductGetResponse>> getProductByUser(@RequestParam(defaultValue = "1") int page,
-//                                                                      @RequestParam(defaultValue = "10") int size,
-//                                                                          @PathVariable String userId
-//    ) {
-//
-//        PageResponse<ProductGetResponse> response = productService.getProductsByUserId(page, size, userId);
-//
-//        return ApiResponse.<PageResponse<ProductGetResponse>>builder()
-//                .result(response)
-//                .build();
-//    }
-//    @GetMapping(value = "/get-products-by-category/{categoryId}")
-//    public ApiResponse<PageResponse<ProductGetResponse>> getProductByCategory(@RequestParam(defaultValue = "1") int page,
-//                                                                          @RequestParam(defaultValue = "10") int size,
-//                                                                          @PathVariable String categoryId
-//    ) {
-//
-//        PageResponse<ProductGetResponse> response = productService.getProductsByCategoryId(page, size, categoryId);
-//
-//        return ApiResponse.<PageResponse<ProductGetResponse>>builder()
-//                .result(response)
-//                .build();
-//    }
+    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<ProductCreateResponse> createProduct(
+            @RequestPart("request") ProductCreateRequest request,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files) {
 
+        return ApiResponse.<ProductCreateResponse>builder()
+                .result(productService.createProduct(request, files))
+                .build();
+    }
 
-
-//
-//    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    public ApiResponse<ProductCreateResponse> createProduct(
-//            @RequestPart("request") ProductCreateRequest request,
-//            @RequestPart(value = "files", required = false) List<MultipartFile> files) {
-//
-//        return ApiResponse.<ProductCreateResponse>builder()
-//                .result(productService.createProduct(request, files))
-//                .build();
-//    }
-//
 //    @DeleteMapping(value = "/delete")
 //    public ApiResponse<Boolean> deleteProduct(
 //            @RequestParam("productId") String productId) {

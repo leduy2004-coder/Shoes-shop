@@ -1,10 +1,12 @@
-package com.java.shoes_service.dto.product;
+package com.java.shoes_service.dto.product.product;
 
+import com.java.CloudinaryResponse;
 import com.java.shoes_service.utility.ProductStatus;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.Instant;
+import java.util.List;
 
 @Data
 @Builder
@@ -13,10 +15,8 @@ import java.time.Instant;
 @Getter
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ProductGetResponse {
+public class ProductCreateResponse {
     String id;
-    Category category;
-    Brand brand;
     String name;
     String slug;
     String description;
@@ -26,18 +26,9 @@ public class ProductGetResponse {
     ProductStatus status;
 
     Instant createdDate;
-    int averageRating;
+
     Instant modifiedDate;
 
-
-    private static class Category {
-        String id;
-        String name;
-    }
-    private static class Brand {
-        String id;
-        String name;
-    }
+    List<CloudinaryResponse> imgUrls;
 
 }
-

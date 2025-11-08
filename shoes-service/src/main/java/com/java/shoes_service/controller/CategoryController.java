@@ -2,7 +2,6 @@ package com.java.shoes_service.controller;
 
 
 import com.java.shoes_service.dto.ApiResponse;
-import com.java.shoes_service.dto.brand.BrandGetResponse;
 import com.java.shoes_service.dto.category.CategoryGetResponse;
 import com.java.shoes_service.dto.category.CategoryRequest;
 import com.java.shoes_service.dto.category.CategoryResponse;

@@ -39,7 +39,9 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             "/auth/register",
             "/auth/introspect",
             "/auth/refresh",
-            "/shoes/products/get-by-id/.*"
+
+            "/shoes/products/get-by-id/.*",
+            "/shoes/products/search"
     };
 
     @Value("${app.api-prefix}")
