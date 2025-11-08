@@ -8,9 +8,10 @@ import com.java.auth_service.entity.UserEntity;
 import java.util.List;
 
 public interface UserService {
-    UserEntity insert(UserRequest userDto);
+    UserEntity register(UserRequest userDto);
     Boolean delete(String id);
     UserResponse findById(String id);
+    UserResponse addUser(UserRequest userDto);
     List<UserResponse> findAll();
     UserResponse findByEmail(String userName);
     UserResponse updateUser(UserUpdateRequest userRequest);

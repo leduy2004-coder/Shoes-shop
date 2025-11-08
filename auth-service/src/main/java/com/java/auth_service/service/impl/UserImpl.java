@@ -10,6 +10,7 @@ import com.java.auth_service.exception.ErrorCode;
 import com.java.auth_service.repository.UserRepository;
 import com.java.auth_service.service.RoleService;
 import com.java.auth_service.service.UserService;
+import com.java.auth_service.utility.GetInfo;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -33,21 +34,27 @@ public class UserImpl implements UserService {
    RoleService roleService;
    PasswordEncoder passwordEncoder;
 
+
     @Override
-    public UserEntity insert(UserRequest userRequest) {
+    public UserEntity register(UserRequest userRequest) {
+       return insert(userRequest, "User");
+    }
+
+    public UserEntity insert(UserRequest userRequest, String role) {
         if (userRepository.findByEmail(userRequest.getEmail()).isPresent())
             throw new AppException(ErrorCode.USER_EXISTED);
 
         UserEntity userEntity = modelMapper.map(userRequest, UserEntity.class);
-        userEntity.setRole(RoleEntity.builder().code("USER").code("USER").build());
-
-        userEntity.setName(userRequest.getName());
-        userEntity.setEmail(userRequest.getEmail());
+        userEntity.setRole(modelMapper.map(roleService.findByCode(role), RoleEntity.class));
         userEntity.setStatus(true);
         userEntity.setPassword(passwordEncoder.encode(userRequest.getPassword()));
         return userRepository.save(userEntity);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    public UserResponse addUser(UserRequest userRequest) {
+        return modelMapper.map(insert(userRequest, userRequest.getRole().getCode()), UserResponse.class);
+    }
 
     @PreAuthorize("hasRole('ADMIN')")
     @Override

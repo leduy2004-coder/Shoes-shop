@@ -27,8 +27,10 @@ import static org.springframework.security.config.http.SessionCreationPolicy.STA
 public class SecurityConfig {
 
     private static final String[] WHITE_LIST_URL = {
-            "/auth2/**",
-            "/users/register",
+            "/register",
+            "/login",
+            "/introspect",
+            "/refresh"
     };
 
     LogoutHandler logoutHandler;

@@ -25,9 +25,7 @@ import static org.springframework.security.config.http.SessionCreationPolicy.STA
 public class SecurityConfig {
 
     private static final String[] WHITE_LIST_URL = {
-            "/get-detail-product/*",
-            "/categories/get-all",
-            "/get-products-by-user/*",
+            "/products/get-by-id/*"
     };
 
     CorsConfigurationSource corsConfigurationSource;

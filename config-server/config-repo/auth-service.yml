@@ -1,4 +1,9 @@
-
+app:
+  bootstrap:
+    admin:
+      email: admin
+      password: admin
+      name: Administrator
 server:
   port: 8081
   servlet:

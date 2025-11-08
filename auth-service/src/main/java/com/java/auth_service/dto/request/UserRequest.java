@@ -21,4 +21,6 @@ public class UserRequest {
     String email;
     String phone;
     String address;
+
+    RoleRequest role;
 }
