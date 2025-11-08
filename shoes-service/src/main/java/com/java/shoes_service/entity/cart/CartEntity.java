@@ -1,18 +1,23 @@
 package com.java.shoes_service.entity.cart;
 
 import com.java.shoes_service.entity.common.BaseEntity;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Document(collection = "cart")
+@Getter
+@Setter
 public class CartEntity extends BaseEntity {
     String userId;
+    int count;
+    Double totalPrice;
+
+
 }

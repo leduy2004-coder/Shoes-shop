@@ -26,7 +26,7 @@ public class ProductGetResponse {
     ProductStatus status;
 
     Instant createdDate;
-
+    int averageRating;
     Instant modifiedDate;
 
 

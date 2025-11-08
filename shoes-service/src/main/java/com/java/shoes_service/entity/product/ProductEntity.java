@@ -2,6 +2,7 @@ package com.java.shoes_service.entity.product;
 
 import com.java.shoes_service.entity.brand.BrandEntity;
 import com.java.shoes_service.entity.common.BaseEntity;
+import com.java.shoes_service.utility.ProductStatus;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,7 +31,7 @@ public class ProductEntity extends BaseEntity {
     double price;
     double discount;
     int stock;
-    String status; // active | inactive
+    ProductStatus status; // active | inactive
 
     int averageRating;
 
