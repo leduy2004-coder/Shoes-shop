@@ -49,7 +49,7 @@ public class JwtService {
             UserEntity userDetails
     ) {
         // Thêm quyền vào claim
-        extraClaims.put("roles", buildScope(userDetails));
+        extraClaims.put("roles", userDetails.getRole().getCode());
         return buildToken(extraClaims, userDetails, jwtExpiration);
     }
 
@@ -99,9 +99,4 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    private String buildScope(UserEntity user) {
-        return user.getRoles().stream()
-                .map(RoleEntity::getCode)
-                .collect(Collectors.joining(" "));
-    }
 }

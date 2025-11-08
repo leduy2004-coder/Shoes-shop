@@ -2,11 +2,11 @@ package com.java.auth_service.service.security;
 
 import com.java.IntrospectRequest;
 import com.java.IntrospectResponse;
-import com.java.ProfileCreationRequest;
 import com.java.auth_service.dto.request.AuthenticationRequest;
 import com.java.auth_service.dto.request.UserRequest;
 import com.java.auth_service.dto.response.AuthenticationResponse;
 import com.java.auth_service.dto.response.RoleResponse;
+import com.java.auth_service.dto.response.UserRegisterResponse;
 import com.java.auth_service.entity.UserEntity;
 import com.java.auth_service.exception.AppException;
 import com.java.auth_service.exception.ErrorCode;
@@ -65,14 +65,13 @@ public class AuthenticationService {
     public AuthenticationResponse register(UserRequest request) {
         UserEntity userSaver = userService.insert(request);
 
-        var profileRequest = modelMapper.map(request, ProfileCreationRequest.class);
-        profileRequest.setUserId(userSaver.getId());
-
-
+        UserRegisterResponse userRegisterResponse = modelMapper.map(userSaver, UserRegisterResponse.class);
+        userRegisterResponse.setRole(userSaver.getRole().getCode());
         var jwtToken = jwtService.generateToken(userSaver);
         var refreshToken = jwtService.generateRefreshToken(userSaver);
         tokenRedisService.saveRefreshToken(userSaver.getId(), refreshToken);
         return AuthenticationResponse.builder()
+                .user(userRegisterResponse)
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)
                 .build();
@@ -83,9 +82,10 @@ public class AuthenticationService {
         var refreshToken = "";
         List<RoleResponse> roles;
         UserEntity user;
+        UserRegisterResponse userRegisterResponse;
         try {
             PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
-            user = userRepository.findByUsername(request.getUsername()).orElse(null);
+            user = userRepository.findByEmail(request.getEmail()).orElse(null);
 
             assert user != null;
             boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
@@ -96,7 +96,8 @@ public class AuthenticationService {
             refreshToken = jwtService.generateRefreshToken(user);
             tokenRedisService.saveRefreshToken(user.getId(), refreshToken);
 
-            roles = user.getRoles().stream().map(roleEntity -> modelMapper.map(roleEntity, RoleResponse.class)).toList();
+            userRegisterResponse = modelMapper.map(user, UserRegisterResponse.class);
+            userRegisterResponse.setRole(user.getRole().getCode());
 
         } catch (Exception e) {
             throw new AppException(ErrorCode.USER_NOT_EXISTED);
@@ -104,10 +105,7 @@ public class AuthenticationService {
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)
-                .id(user.getId())
-                .nickName(user.getNickName())
-                .email(user.getEmail())
-                .roles(roles)
+                .user(userRegisterResponse)
                 .build();
     }
 
@@ -135,10 +133,12 @@ public class AuthenticationService {
             assert user != null;
             tokenRedisService.saveRefreshToken(user.getId(), newRefreshToken);
 
+
+            UserRegisterResponse userRegisterResponse = modelMapper.map(user, UserRegisterResponse.class);
+            userRegisterResponse.setRole(user.getRole().getCode());
+
             return AuthenticationResponse.builder()
-                    .nickName(user.getNickName())
-                    .email(user.getEmail())
-                    .id(user.getId())
+                    .user(userRegisterResponse)
                     .accessToken(newAccessToken)
                     .refreshToken(newRefreshToken)
                     .build();

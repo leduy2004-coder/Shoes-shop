@@ -1,6 +1,5 @@
 package com.java.auth_service.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -11,10 +10,10 @@ import lombok.experimental.FieldDefaults;
 @Setter
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserResponse{
+@Builder
+public class UserRegisterResponse {
     String id;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy")
-    RoleResponse roles;
+    String role;
     String name;
     String phone;
     String address;

@@ -15,11 +15,10 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserRequest {
     String id;
-    String username;
     String password;
     Boolean status;
-    String nickName;
+    String name;
     String email;
-
-    List<RoleRequest> roles;
+    String phone;
+    String address;
 }
