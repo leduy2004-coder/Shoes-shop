@@ -2,6 +2,7 @@ package com.java.shoes_service.repository.httpClient;
 
 import com.java.CloudinaryResponse;
 import com.java.FileDeleteAllRequest;
+import com.java.ImageType;
 import com.java.shoes_service.config.security.AuthenticationRequestInterceptor;
 import com.java.shoes_service.dto.ApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -27,10 +28,12 @@ public interface FileClient {
                                                        @RequestPart("brandId") String brandId);
 
     @GetMapping(value = "/file/internal/get-img")
-    ApiResponse<List<CloudinaryResponse>> getImage(@RequestParam("id") String id);
+    ApiResponse<List<CloudinaryResponse>> getImage(@RequestParam("id") String id,
+                                                   @RequestParam("type") ImageType type);
 
     @DeleteMapping(value = "/file/internal/delete-all-img")
-    ApiResponse<Boolean> deleteAllImageProduct(@RequestBody FileDeleteAllRequest request);
+    ApiResponse<Boolean> deleteAllImageProduct(@RequestBody FileDeleteAllRequest request,
+                                               @RequestParam("type") ImageType type);
 
 
 }

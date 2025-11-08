@@ -1,6 +1,7 @@
 package com.java.shoes_service.service;
 
 import com.java.CloudinaryResponse;
+import com.java.ImageType;
 import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.product.product.ProductCreateRequest;
 import com.java.shoes_service.dto.product.product.ProductCreateResponse;
@@ -75,7 +76,8 @@ public class ProductService {
         ProductGetResponse productGetResponse = modelMapper.map(entity, ProductGetResponse.class);
 
         List<VariantEntity> list = variantRepository.findByProductId(productId);
-        return ProductGetDetailResponse.builder().product(productGetResponse).variants(list).build();
+        List<CloudinaryResponse> listImage = fileClient.getImage(productId, ImageType.PRODUCT).getResult();
+        return ProductGetDetailResponse.builder().product(productGetResponse).variants(list).listImg(listImage).build();
     }
 
     public PageResponse<ProductGetResponse> searchProducts(
@@ -218,7 +220,10 @@ public class ProductService {
     }
 
     private ProductGetResponse mapToProductGetResponse(ProductEntity entity) {
-        return modelMapper.map(entity, ProductGetResponse.class);
+        ProductGetResponse response = modelMapper.map(entity, ProductGetResponse.class);
+        response.setImageUrl(fileClient.getImage(entity.getId(), ImageType.PRODUCT).getResult().get(0));
+
+        return response;
     }
 
     private Sort resolveSort(String sortBy, String sortOrder) {

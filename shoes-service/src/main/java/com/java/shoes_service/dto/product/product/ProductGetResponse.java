@@ -1,5 +1,6 @@
 package com.java.shoes_service.dto.product.product;
 
+import com.java.CloudinaryResponse;
 import com.java.shoes_service.dto.brand.BrandGetResponse;
 import com.java.shoes_service.dto.category.CategoryResponse;
 import com.java.shoes_service.utility.ProductStatus;
@@ -31,6 +32,7 @@ public class ProductGetResponse {
     int averageRating;
     Instant modifiedDate;
 
+    CloudinaryResponse imageUrl;
 
 }
 
