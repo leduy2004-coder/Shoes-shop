@@ -18,15 +18,15 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Document(collection = "products")
 public class ProductEntity extends BaseEntity {
     @DBRef
-    private CategoryEntity category;
+    CategoryEntity category;
     @DBRef
-    private BrandEntity brand;
+    BrandEntity brand;
 
-    private String name;
-    private String slug;
-    private String description;
-    private double price;
-    private double discount;
-    private int stock;
-    private String status; // active | inactive
+    String name;
+    String slug;
+    String description;
+    double price;
+    double discount;
+    int stock;
+    String status; // active | inactive
 }
