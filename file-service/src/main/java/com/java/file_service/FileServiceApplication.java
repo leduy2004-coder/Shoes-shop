@@ -7,7 +7,6 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @SpringBootApplication
 @EnableFeignClients // Kích hoạt Feign Clients
-@EnableDiscoveryClient
 public class FileServiceApplication {
 
 	public static void main(String[] args) {
