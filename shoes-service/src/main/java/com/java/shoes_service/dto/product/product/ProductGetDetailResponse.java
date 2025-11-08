@@ -1,5 +1,6 @@
 package com.java.shoes_service.dto.product.product;
 
+import com.java.CloudinaryResponse;
 import com.java.shoes_service.entity.product.VariantEntity;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -17,6 +18,8 @@ public class ProductGetDetailResponse {
     ProductGetResponse product;
 
     List<VariantEntity> variants;
+
+    List<CloudinaryResponse> listImg;
 
 }
 
