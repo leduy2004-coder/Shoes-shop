@@ -1,7 +1,11 @@
 package com.java.shoes_service.service;
 
+import com.java.shoes_service.dto.brand.BrandGetResponse;
+import com.java.shoes_service.dto.brand.BrandRequest;
 import com.java.shoes_service.dto.category.CategoryGetResponse;
+import com.java.shoes_service.dto.category.CategoryRequest;
 import com.java.shoes_service.dto.category.CategoryResponse;
+import com.java.shoes_service.entity.brand.BrandEntity;
 import com.java.shoes_service.entity.product.CategoryEntity;
 import com.java.shoes_service.repository.CategoryRepository;
 import lombok.AccessLevel;
@@ -10,6 +14,7 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -71,6 +76,13 @@ public class CategoryService {
                 .map(e -> modelMapper.map(e, CategoryResponse.class))
                 .toList();
     }
+
+    public CategoryResponse create(CategoryRequest request){
+        CategoryEntity category = modelMapper.map(request, CategoryEntity.class);
+        category = categoryRepository.save(category);
+        return modelMapper.map(category, CategoryResponse.class);
+    }
+
 
 
 }

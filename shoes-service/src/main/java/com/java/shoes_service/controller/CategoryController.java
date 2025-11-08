@@ -2,7 +2,9 @@ package com.java.shoes_service.controller;
 
 
 import com.java.shoes_service.dto.ApiResponse;
+import com.java.shoes_service.dto.brand.BrandGetResponse;
 import com.java.shoes_service.dto.category.CategoryGetResponse;
+import com.java.shoes_service.dto.category.CategoryRequest;
 import com.java.shoes_service.dto.category.CategoryResponse;
 import com.java.shoes_service.service.CategoryService;
 import lombok.AccessLevel;
@@ -45,14 +47,14 @@ public class CategoryController {
                 .result(data)
                 .build();
     }
-//    @PostMapping(value = "/create")
-//    public ApiResponse<CategoriesResponse> createCategory(
-//            @RequestPart("request") CategoryCreateRequest categoryCreateRequest,
-//            @RequestPart(value = "file", required = false) MultipartFile file) {
-//        CategoriesResponse response = categoryService.createCategory(categoryCreateRequest,file);
-//        return ApiResponse.<CategoriesResponse>builder()
-//                .result(response)
-//                .build();
-//    }
+
+    @PostMapping("/create")
+    public ApiResponse<CategoryResponse> create(@RequestBody CategoryRequest request) {
+        CategoryResponse response = categoryService.create(request);
+        return ApiResponse.<CategoryResponse>builder()
+                .result(response)
+                .build();
+    }
+
 
 }
