@@ -1,34 +1,50 @@
-//package com.java.shoes_service.controller;
-//
-//
-//import lombok.AccessLevel;
-//import lombok.RequiredArgsConstructor;
-//import lombok.experimental.FieldDefaults;
-//import lombok.extern.slf4j.Slf4j;
-//import org.springframework.web.bind.annotation.*;
-//import org.springframework.web.multipart.MultipartFile;
-//
-//import java.util.List;
-//
-//@RestController
-//@RequiredArgsConstructor
-//@Slf4j
-//@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-//@RequestMapping("/categories")
-//public class CategoryController {
-//    CategoryService categoryService;
-//
-//
-//    @GetMapping(value = "/get-all")
-//    public ApiResponse<List<CategoriesResponse>> getAll() {
-//
-//        List<CategoriesResponse> response = categoryService.getAllCategory();
-//
-//        return ApiResponse.<List<CategoriesResponse>>builder()
-//                .result(response)
-//                .build();
-//    }
-//
+package com.java.shoes_service.controller;
+
+
+import com.java.shoes_service.dto.ApiResponse;
+import com.java.shoes_service.dto.category.CategoryGetResponse;
+import com.java.shoes_service.dto.category.CategoryResponse;
+import com.java.shoes_service.service.CategoryService;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequiredArgsConstructor
+@Slf4j
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@RequestMapping("/categories")
+public class CategoryController {
+    CategoryService categoryService;
+
+
+    @GetMapping
+    public ApiResponse<List<CategoryGetResponse>> getAllCategories() {
+        List<CategoryGetResponse> data = categoryService.getParentsWithChildren();
+        return ApiResponse.<List<CategoryGetResponse>>builder()
+                .result(data)
+                .build();
+    }
+
+    @GetMapping("/{parentId}")
+    public ApiResponse<CategoryGetResponse> getListCategory(@PathVariable String parentId) {
+        CategoryGetResponse data = categoryService.getChildrenByParentId(parentId);
+        return ApiResponse.<CategoryGetResponse>builder()
+                .result(data)
+                .build();
+    }
+
+    @GetMapping("/get-all-parent")
+    public ApiResponse<List<CategoryResponse>> getAllParentCategories() {
+        List<CategoryResponse> data = categoryService.getOnlyParents();
+        return ApiResponse.<List<CategoryResponse>>builder()
+                .result(data)
+                .build();
+    }
 //    @PostMapping(value = "/create")
 //    public ApiResponse<CategoriesResponse> createCategory(
 //            @RequestPart("request") CategoryCreateRequest categoryCreateRequest,
@@ -38,5 +54,5 @@
 //                .result(response)
 //                .build();
 //    }
-//
-//}
+
+}
