@@ -14,15 +14,22 @@ import java.util.List;
 @FeignClient(name = "file-service",
         configuration = {AuthenticationRequestInterceptor.class})
 public interface FileClient {
-    @PostMapping(value = "/internal/file/product/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/file/internal/product/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<CloudinaryResponse> uploadMediaProduct(@RequestPart("file") MultipartFile file,
                                                        @RequestPart("productId") String productId);
 
+    @PostMapping(value = "/file/internal/banner/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    ApiResponse<CloudinaryResponse> uploadMediaBanner(@RequestPart("file") MultipartFile file,
+                                                       @RequestPart("bannerId") String bannerId);
 
-    @GetMapping(value = "/internal/file/get-img")
+    @PostMapping(value = "/file/internal/brand/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    ApiResponse<CloudinaryResponse> uploadMediaBrand(@RequestPart("file") MultipartFile file,
+                                                       @RequestPart("brandId") String brandId);
+
+    @GetMapping(value = "/file/internal/get-img")
     ApiResponse<List<CloudinaryResponse>> getImage(@RequestParam("id") String id);
 
-    @DeleteMapping(value = "/internal/file/delete-all-img")
+    @DeleteMapping(value = "/file/internal/delete-all-img")
     ApiResponse<Boolean> deleteAllImageProduct(@RequestBody FileDeleteAllRequest request);
 
 

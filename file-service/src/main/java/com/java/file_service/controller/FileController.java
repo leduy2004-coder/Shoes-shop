@@ -1,6 +1,7 @@
 package com.java.file_service.controller;
 
 import com.java.CloudinaryResponse;
+import com.java.ImageType;
 import com.java.file_service.dto.ApiResponse;
 import com.java.file_service.service.FileService;
 import lombok.AccessLevel;
@@ -21,7 +22,7 @@ public class FileController {
     ApiResponse<CloudinaryResponse> uploadMedia(@RequestParam("file") MultipartFile file,
                                                 @RequestParam("id") String id)  {
         return ApiResponse.<CloudinaryResponse>builder()
-                .result(fileService.uploadFile(file,id))
+                .result(fileService.uploadFile(file, ImageType.PRODUCT, id))
                 .build();
     }
 }
