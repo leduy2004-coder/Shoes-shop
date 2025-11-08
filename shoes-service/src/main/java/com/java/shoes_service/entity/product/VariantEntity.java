@@ -1,36 +1,29 @@
 package com.java.shoes_service.entity.product;
 
-import com.java.shoes_service.entity.brand.BrandEntity;
 import com.java.shoes_service.entity.common.BaseEntity;
 import com.java.shoes_service.utility.ProductStatus;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Document(collection = "products")
+@Document(collection = "variant")
 @Getter
 @Setter
-public class ProductEntity extends BaseEntity {
-    @DBRef
-    CategoryEntity category;
-    @DBRef
-    BrandEntity brand;
+public class VariantEntity extends BaseEntity {
 
-    String name;
-    String slug;
-    String description;
-    double price;
-    double discount;
-    int totalStock;
+    String productId;
 
+    int stock;
+    String color;
     ProductStatus status; // active | inactive
 
-    int averageRating;
     int countSell;
 
+    @Field("size")
+    SizeLabel size;
 }

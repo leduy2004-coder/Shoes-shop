@@ -11,9 +11,6 @@ import org.springframework.data.mongodb.core.mapping.Field;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class SizeLabel {
-    @Field("id")
-    String id;
-
     @Field("label")
     String label;     // ví dụ: "38", "39", "M", "L"
 }
