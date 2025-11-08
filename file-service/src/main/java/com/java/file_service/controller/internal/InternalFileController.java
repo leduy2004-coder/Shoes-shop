@@ -3,6 +3,7 @@ package com.java.file_service.controller.internal;
 
 import com.java.CloudinaryResponse;
 import com.java.FileDeleteAllRequest;
+import com.java.ImageType;
 import com.java.file_service.dto.ApiResponse;
 import com.java.file_service.service.FileService;
 import lombok.AccessLevel;
@@ -21,28 +22,43 @@ import java.util.List;
 public class InternalFileController {
     FileService fileService;
 
-    @GetMapping(value = "/file/get-img")
-    public ApiResponse<List<CloudinaryResponse>> getImageProduct(@RequestParam("id") String id) {
+    @GetMapping(value = "/get-img")
+    public ApiResponse<List<CloudinaryResponse>> getImageProduct(@RequestParam("id") String id,
+                                                                 @RequestParam("type") ImageType type) {
 
-        List<CloudinaryResponse> response = fileService.getAllById(id);
+        List<CloudinaryResponse> response = fileService.getAllById(id, type);
 
         return ApiResponse.<List<CloudinaryResponse>>builder()
                 .result(response)
                 .build();
     }
 
-    @PostMapping(value = "/file/product/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/product/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<CloudinaryResponse> uploadMediaProduct(@RequestPart("file") MultipartFile file ,
                                                        @RequestPart("productId") String productId) {
         return ApiResponse.<CloudinaryResponse>builder()
-                .result(fileService.uploadFile(file, productId))
+                .result(fileService.uploadFile(file, ImageType.PRODUCT,productId))
                 .build();
     }
+    @PostMapping("/brand/upload")
+    ApiResponse<CloudinaryResponse> uploadMediaPost(@RequestParam("file") MultipartFile file,
+                                                    @RequestParam("brandId") String brandId){
+        return ApiResponse.<CloudinaryResponse>builder()
+                .result(fileService.uploadFile(file, ImageType.BRAND, brandId))
+                .build();
+    }
+    @PostMapping("/banner/upload")
+    ApiResponse<CloudinaryResponse> uploadBanner(@RequestParam("file") MultipartFile file,
+                                                 @RequestParam("bannerId") String bannerId){
+        return ApiResponse.<CloudinaryResponse>builder()
+                .result(fileService.uploadFile(file, ImageType.BANNER, bannerId))
+                .build();
+    }
+    @DeleteMapping(value = "/delete-all-img")
+    public ApiResponse<Boolean> deleteAllImageProduct(@RequestBody FileDeleteAllRequest request,
+                                                      @RequestParam("type") ImageType type) {
 
-    @DeleteMapping(value = "/file/delete-all-img")
-    public ApiResponse<Boolean> deleteAllImageProduct(@RequestBody FileDeleteAllRequest request) {
-
-        Boolean response = fileService.deleteAllById(request.getId());
+        Boolean response = fileService.deleteAllById(request.getId(), type);
         return ApiResponse.<Boolean>builder()
                 .result(response)
                 .build();

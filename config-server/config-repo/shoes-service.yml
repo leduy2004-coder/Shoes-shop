@@ -2,8 +2,9 @@ server:
   port: 8083
   servlet:
     context-path: /shoes
-
 spring:
+  application:
+    name: shoes-service
   servlet:
     multipart:
       max-file-size: 20MB
@@ -22,13 +23,15 @@ spring:
       ssl:
         enabled: false
 
-
-
-
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    ip-address: 127.0.0.1
+    non-secure-port: ${server.port}
+    instance-id: ${spring.application.name}:${server.port}
 
