@@ -20,6 +20,4 @@ public class AuthenticationResponse {
     String refreshToken;
 
     UserRegisterResponse user;
-    long expires_in;
-
 }

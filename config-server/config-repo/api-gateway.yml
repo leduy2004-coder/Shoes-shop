@@ -5,49 +5,38 @@ app:
   api-prefix: /api/v1
   web-client-url: lb://auth-service
   cors:
-    allowed-origins: http://localhost:5173,http://localhost:3000/
+    allowed-origins: http://localhost:5173,http://localhost:3000
 spring:
   application:
     name: api-gateway
   cloud:
     gateway:
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
-      routes:
-        - id: auth-service
-          uri: lb://auth-service
-          predicates:
-            - Path=/api/v1/auth/**
-          filters:
-            - StripPrefix=2
-            - AddRequestHeader=X-Gateway, API-Gateway
+      server:
+        webflux:
+          routes:
+            - id: auth-service
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/v1/auth/**
+              filters:
+                - StripPrefix=2
 
-        # FILE-SERVICE
-        - id: file-service
-          uri: lb://file-service
-          predicates:
-            - Path=/api/v1/file/**
-          filters:
-            - StripPrefix=2
-            - AddRequestHeader=X-Gateway, API-Gateway
+            # FILE-SERVICE
+            - id: file-service
+              uri: lb://file-service
+              predicates:
+                - Path=/api/v1/file/**
+              filters:
+                - StripPrefix=2
 
-        # SHOES-SERVICE
-        - id: shoes-service
-          uri: lb://shoes-service
-          predicates:
-            - Path=/api/v1/shoes/**
-          filters:
-            - StripPrefix=2
-            - AddRequestHeader=X-Gateway, API-Gateway
-  eureka:
-    client:
-      service-url:
-        defaultZone: http://localhost:8761/eureka/
-      register-with-eureka: true
-      fetch-registry: true
-logging:
-  level:
-    org.springframework.cloud.gateway: DEBUG
-
+            # SHOES-SERVICE
+            - id: shoes-service
+              uri: lb://shoes-service
+              predicates:
+                - Path=/api/v1/shoes/**
+              filters:
+                - StripPrefix=2
+eureka:
+  client:
+    fetch-registry: true
+    registryFetchIntervalSeconds: 5
