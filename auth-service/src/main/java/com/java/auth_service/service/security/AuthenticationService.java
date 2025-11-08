@@ -63,7 +63,7 @@ public class AuthenticationService {
     }
 
     public AuthenticationResponse register(UserRequest request) {
-        UserEntity userSaver = userService.insert(request);
+        UserEntity userSaver = userService.register(request);
 
         UserRegisterResponse userRegisterResponse = modelMapper.map(userSaver, UserRegisterResponse.class);
         userRegisterResponse.setRole(userSaver.getRole().getCode());

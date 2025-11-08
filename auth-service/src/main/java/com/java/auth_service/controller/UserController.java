@@ -34,6 +34,12 @@ public class UserController {
         return ApiResponse.<UserResponse>builder().result(userResponse).build();
     }
 
+    @PostMapping("/add-user")
+    public ApiResponse<UserResponse> register(
+            @RequestBody UserRequest request
+    ) {
+        return ApiResponse.<UserResponse>builder().result(userService.addUser(request)).build();
+    }
     @DeleteMapping("/delete-user")
     public ApiResponse<Boolean> deleteUser(@RequestParam(value = "id") String id) {
         Boolean status = userService.delete(id);
