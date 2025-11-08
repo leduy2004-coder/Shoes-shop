@@ -1,4 +1,4 @@
-package com.java.shoes_service.entity.brand;
+package com.java.shoes_service.entity.product;
 
 import com.java.shoes_service.entity.common.BaseEntity;
 import lombok.AccessLevel;

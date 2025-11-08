@@ -2,7 +2,7 @@ package com.java.shoes_service.service;
 
 import com.java.shoes_service.dto.category.CategoryGetResponse;
 import com.java.shoes_service.dto.category.CategoryResponse;
-import com.java.shoes_service.entity.brand.CategoryEntity;
+import com.java.shoes_service.entity.product.CategoryEntity;
 import com.java.shoes_service.repository.CategoryRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
