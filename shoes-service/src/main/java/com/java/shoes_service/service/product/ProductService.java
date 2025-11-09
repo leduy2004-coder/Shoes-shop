@@ -15,6 +15,7 @@ import com.java.shoes_service.repository.httpClient.FileClient;
 import com.java.shoes_service.repository.product.HistoryProductRepository;
 import com.java.shoes_service.repository.product.ProductRepository;
 import com.java.shoes_service.repository.product.VariantRepository;
+import com.java.shoes_service.repository.promotion.ReviewRepository;
 import com.java.shoes_service.utility.ProductStatus;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -48,6 +49,8 @@ public class ProductService {
     BrandRepository brandRepository;
     VariantRepository variantRepository;
     HistoryProductRepository historyProductRepository;
+    ReviewRepository reviewRepository;
+    VariantService variantService;
 
     public PageResponse<ProductGetResponse> getAllProduct(int page, int size) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdDate").descending());
@@ -101,7 +104,7 @@ public class ProductService {
         if (statusStr != null && !statusStr.isBlank()) {
             // Hỗ trợ enum lẫn string trong DB
             try {
-                var st = com.java.shoes_service.utility.ProductStatus.valueOf(statusStr.trim().toUpperCase());
+                var st = ProductStatus.valueOf(statusStr.trim().toUpperCase());
                 ands.add(Criteria.where("status").is(st));
             } catch (IllegalArgumentException ignore) {
                 ands.add(Criteria.where("status").is(statusStr.trim()));
@@ -132,10 +135,10 @@ public class ProductService {
         query.skip((long) pageIndex * pageSize).limit(pageSize);
 
         // 4) Execute
-        List<com.java.shoes_service.entity.product.ProductEntity> content =
-                mongoTemplate.find(query, com.java.shoes_service.entity.product.ProductEntity.class);
+        List<ProductEntity> content =
+                mongoTemplate.find(query, ProductEntity.class);
         long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1),
-                com.java.shoes_service.entity.product.ProductEntity.class);
+                ProductEntity.class);
 
         // 5) Map DTO
         List<ProductGetResponse> items = content.stream()
@@ -264,6 +267,69 @@ public class ProductService {
         }
         return fileClient.getImage(request.getProductId(), ImageType.PRODUCT).getResult();
     }
+    // Top 5 theo averageRating desc, tie-break theo countSell desc, rồi createdDate desc
+    public List<ProductGetResponse> getTopRatedTop5() {
+        Pageable top5 = PageRequest.of(0, 5,
+                Sort.by(Sort.Order.desc("averageRating"),
+                        Sort.Order.desc("countSell"),
+                        Sort.Order.desc("createdDate")));
+        Page<ProductEntity> p = productRepository.findAll(top5);
+        return p.getContent().stream().map(this::mapToProductGetResponse).toList();
+    }
+
+    // Xoá sạch: ảnh → history theo variant → variants → product
+    public Boolean deleteProduct(String productId) {
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
+
+        // Lấy variants để xoá history + cart items theo variant
+        List<VariantEntity> variants = variantRepository.findByProductId(productId);
+        if (!variants.isEmpty()) {
+            List<String> vIds = variants.stream().map(VariantEntity::getId).toList();
+
+            // Xoá cart items theo variantIds (phòng xa)
+
+            vIds.forEach(variantService::deleteVariant);
+
+            // Xoá history
+            try {
+                historyProductRepository.deleteByVariantIdIn(vIds);
+            } catch (Exception e) {
+                log.warn("deleteByVariantIdIn not available, fallback find+delete: {}", e.getMessage());
+                historyProductRepository.findAllByVariantIdIn(vIds)
+                        .forEach(h -> historyProductRepository.deleteById(h.getId()));
+            }
+        }
+
+        // Xoá ảnh
+        try {
+            var imgs = fileClient.getImage(productId, ImageType.PRODUCT).getResult();
+            if (imgs != null) {
+                for (var img : imgs) {
+                    if (img != null && img.getFileName() != null) {
+                        try {
+                            fileClient.deleteByNameImage(img.getFileName(), ImageType.PRODUCT);
+                        } catch (Exception ex) {
+                            log.warn("Delete image {} failed: {}", img.getFileName(), ex.getMessage());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Get/Delete images error for product {}: {}", productId, e.getMessage());
+        }
+
+
+
+        // 3) Xoá reviews
+        reviewRepository.deleteByProductId(productId);
+
+        // 5) Xoá product
+        productRepository.delete(product);
+        return true;
+    }
+
+
     private ProductGetResponse mapToProductGetResponse(ProductEntity entity) {
         ProductGetResponse response = modelMapper.map(entity, ProductGetResponse.class);
         response.setImageUrl(fileClient.getImage(entity.getId(), ImageType.PRODUCT).getResult().get(0));
@@ -275,10 +341,16 @@ public class ProductService {
         String field = (sortBy == null || sortBy.isBlank()) ? "createdDate" : sortBy.trim();
         Sort.Direction dir = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
 
-        // Whitelist các field hợp lệ để tránh sort field lạ
         return switch (field) {
-            case "price", "name", "createdDate", "modifiedDate", "discount", "stock" ->
-                    Sort.by(dir, field);
+            case "name",
+                 "price",
+                 "discount",
+                 "totalStock",
+                 "averageRating",
+                 "countSell",
+                 "status",
+                 "createdDate",
+                 "modifiedDate" -> Sort.by(dir, field);
             default -> Sort.by(Sort.Direction.DESC, "createdDate");
         };
     }

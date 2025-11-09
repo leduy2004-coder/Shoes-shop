@@ -96,13 +96,18 @@ public class ProductController {
                 .result(response)
                 .build();
     }
+    @GetMapping("/top-rated")
+    public ApiResponse<List<ProductGetResponse>> getTopRated() {
+        return ApiResponse.<List<ProductGetResponse>>builder()
+                .result(productService.getTopRatedTop5())
+                .build();
+    }
+    @DeleteMapping(value = "/delete")
+    public ApiResponse<Boolean> deleteProduct(
+            @RequestParam("productId") String productId) {
 
-    //@DeleteMapping(value = "/delete")
-//    public ApiResponse<Boolean> deleteProduct(
-//            @RequestParam("productId") String productId) {
-//
-//        return ApiResponse.<Boolean>builder()
-//                .result(productService.deleteProduct(productId))
-//                .build();
-//    }
+        return ApiResponse.<Boolean>builder()
+                .result(productService.deleteProduct(productId))
+                .build();
+    }
 }
