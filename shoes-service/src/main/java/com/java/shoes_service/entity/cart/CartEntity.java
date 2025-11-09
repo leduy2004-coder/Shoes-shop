@@ -5,8 +5,6 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.List;
-
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -18,6 +16,4 @@ public class CartEntity extends BaseEntity {
     String userId;
     int count;
     Double totalPrice;
-
-
 }
