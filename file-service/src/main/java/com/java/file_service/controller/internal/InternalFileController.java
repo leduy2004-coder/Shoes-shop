@@ -63,6 +63,15 @@ public class InternalFileController {
                 .result(response)
                 .build();
     }
+    @DeleteMapping(value = "/delete-image-by-name")
+    public ApiResponse<Boolean> deleteByNameImage(@RequestBody String nameImage,
+                                                      @RequestParam("type") ImageType type) {
+
+        Boolean response = fileService.deleteByNameImage(nameImage, type);
+        return ApiResponse.<Boolean>builder()
+                .result(response)
+                .build();
+    }
 
 
 }

@@ -26,7 +26,9 @@ public class SecurityConfig {
 
     private static final String[] WHITE_LIST_URL = {
             "/products/get-by-id/*",
-            "/products/search"
+            "/products/search",
+            "/banners/search",
+            "/banners/get-by-slot/*"
     };
 
     CorsConfigurationSource corsConfigurationSource;

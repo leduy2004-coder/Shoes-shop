@@ -35,6 +35,9 @@ public interface FileClient {
     ApiResponse<Boolean> deleteAllImageProduct(@RequestBody FileDeleteAllRequest request,
                                                @RequestParam("type") ImageType type);
 
+    @DeleteMapping(value = "/file/internal/delete-image-by-name")
+    ApiResponse<Boolean> deleteByNameImage(@RequestBody String nameImage,
+                                               @RequestParam("type") ImageType type);
 
 }
 

@@ -52,7 +52,7 @@ public class FileService {
                     .build()).getId();
         }
         return CloudinaryResponse.builder()
-                .fileName(imgId)
+                .fileName(fileName)
                 .url(url).build();
     }
 
@@ -145,6 +145,17 @@ public class FileService {
                 bannerRepository.deleteById(banner.getId());
             });
 
+            return true;
+        }
+        return false;
+
+    }
+
+    public Boolean deleteByNameImage(String name, ImageType imageType) {
+        if (imageType.equals(ImageType.BANNER)) {
+            BannerImageEntity image = bannerRepository.findByName(name);
+            minioService.delete(name);
+            bannerRepository.deleteById(image.getId());
             return true;
         }
         return false;
