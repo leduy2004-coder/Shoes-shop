@@ -1,12 +1,10 @@
 package com.java.shoes_service.controller;
 
 
+import com.java.CloudinaryResponse;
 import com.java.shoes_service.dto.ApiResponse;
 import com.java.shoes_service.dto.PageResponse;
-import com.java.shoes_service.dto.product.product.ProductCreateRequest;
-import com.java.shoes_service.dto.product.product.ProductCreateResponse;
-import com.java.shoes_service.dto.product.product.ProductGetDetailResponse;
-import com.java.shoes_service.dto.product.product.ProductGetResponse;
+import com.java.shoes_service.dto.product.product.*;
 import com.java.shoes_service.service.ProductService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -76,7 +74,28 @@ public class ProductController {
                 .build();
     }
 
-//    @DeleteMapping(value = "/delete")
+    @PatchMapping(value = "/update/content")
+    public ApiResponse<ProductGetDetailResponse> updateProduct(@RequestBody ProductUpdateRequest request){
+        ProductGetDetailResponse response = productService.updateContentProduct(request);
+
+        return ApiResponse.<ProductGetDetailResponse>builder()
+                .result(response)
+                .build();
+    }
+
+    @PostMapping(value = "/update/image")
+    public ApiResponse<List<CloudinaryResponse>> updateImage(@RequestPart("request") ProductUpdateImageRequest request,
+                                                             @RequestPart(value = "files", required = false) List<MultipartFile> files)
+    {
+
+        List<CloudinaryResponse> response = productService.updateImageProduct(request, files);
+
+        return ApiResponse.<List<CloudinaryResponse>>builder()
+                .result(response)
+                .build();
+    }
+
+    //@DeleteMapping(value = "/delete")
 //    public ApiResponse<Boolean> deleteProduct(
 //            @RequestParam("productId") String productId) {
 //
@@ -84,27 +103,4 @@ public class ProductController {
 //                .result(productService.deleteProduct(productId))
 //                .build();
 //    }
-//
-//
-//    @PatchMapping(value = "/update/content")
-//    public ApiResponse<ProductGetResponse> updateProduct(@RequestBody ProductUpdateRequest request){
-//        ProductGetResponse response = productService.updateProduct(request);
-//
-//        return ApiResponse.<ProductGetResponse>builder()
-//                .result(response)
-//                .build();
-//    }
-//
-//    @PostMapping(value = "/update/image")
-//    public ApiResponse<List<CloudinaryResponse>> updateImage(@RequestPart("request") ProductUpdateImageRequest request,
-//                                                             @RequestPart(value = "files", required = false) List<MultipartFile> files)
-//    {
-//
-//        List<CloudinaryResponse> response = productService.updateImageProduct(request, files);
-//
-//        return ApiResponse.<List<CloudinaryResponse>>builder()
-//                .result(response)
-//                .build();
-//    }
-
 }
