@@ -1,43 +1,212 @@
-name: shoes-shop
+name: shoes-shop-api
 services:
+  config-server:
+    # Nếu muốn dùng registry, đảm bảo registry ở trên đang chạy.
+    container_name: config-server
+    build:
+      context: .
+      dockerfile: ./config-server/Dockerfile
+    env_file:
+      - ./config-server/.env
+    environment:
+      - TZ=Asia/Tokyo
+      # Nếu các service là Spring Cloud Config Client, bạn cần cấu hình trong chính app,
+      # thường là SPRING_CLOUD_CONFIG_SERVER_GIT_URI (hoặc bootstrap). Ở compose không cần EUREKA_SERVER cho config-server.
+    networks: [shoes-shop]
+    deploy: { mode: replicated, replicas: 1 }
+    restart: always
+    volumes:
+      - ./config-server/logs:/opt/target/logs
+    ports:
+      - "8888:8888"
+    healthcheck:
+      # Alpine/JRE base image thường không có bash; dùng curl
+      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:8888/actuator/health || curl -sf http://localhost:8888/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  eureka-server:
+    container_name: eureka-server
+    build:
+      context: .
+      dockerfile: ./eureka-server/Dockerfile
+    env_file:
+      - ./eureka-server/.env
+    depends_on:
+      config-server:
+        condition: service_healthy
+    restart: always
+    ports:
+      - "8761:8761"
+    environment:
+      - TZ=Asia/Tokyo
+      # Nếu eureka là config-client, thêm:
+      # - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+    networks: [shoes-shop]
+    deploy: { mode: replicated, replicas: 1 }
+    volumes:
+      - ./eureka-server/logs:/opt/target/logs
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:8761 || curl -sf http://localhost:8761"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  auth-service:
+    container_name: auth-service
+    build:
+      context: .
+      dockerfile: ./auth-service/Dockerfile
+    env_file:
+      - ./auth-service/.env
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      - TZ=Asia/Tokyo
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    networks: [ shoes-shop ]
+    deploy: { mode: replicated, replicas: 1 }
+    volumes:
+      - ./auth-service/logs:/opt/target/logs
+    # (removed) healthcheck
+
+  shoes-service:
+    container_name: shoes-service
+    build:
+      context: .
+      dockerfile: ./shoes-service/Dockerfile
+    env_file:
+      - ./shoes-service/.env
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    restart: always
+    ports:
+      - "8083:8083"
+    environment:
+      - TZ=Asia/Tokyo
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    networks: [ shoes-shop ]
+    deploy: { mode: replicated, replicas: 1 }
+    volumes:
+      - ./shoes-service/logs:/opt/target/logs
+    # (removed) healthcheck
+
+  api-gateway:
+    container_name: api-gateway
+    build:
+      context: .
+      dockerfile: ./api-gateway/Dockerfile
+    env_file:
+      - ./api-gateway/.env
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      auth-service:
+        condition: service_started   # đổi từ service_healthy
+      shoes-service:
+        condition: service_started   # đổi từ service_healthy
+      file-service:
+        condition: service_started
+    restart: always
+    environment:
+      - TZ=Asia/Tokyo
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    networks: [ shoes-shop ]
+    deploy: { mode: replicated, replicas: 1 }
+    volumes:
+      - ./api-gateway/logs:/opt/target/logs
+    ports:
+      - "8778:8080"
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "wget -qO- http://localhost:8080/actuator/health || curl -sf http://localhost:8080/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  file-service:
+    container_name: file-service
+    build:
+      context: .
+      dockerfile: ./file-service/Dockerfile
+    env_file:
+      - ./file-service/.env
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    restart: always
+    environment:
+      - TZ=Asia/Tokyo
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      # - MINIO_ENDPOINT=http://minio:9000
+      # - MINIO_ACCESS_KEY=admin
+      # - MINIO_SECRET_KEY=admin@2024
+    networks: [shoes-shop]
+    deploy: { mode: replicated, replicas: 1 }
+    volumes:
+      - ./file-service/logs:/opt/target/logs
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:8082/actuator/health || curl -sf http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   mongodb:
     image: bitnami/mongodb:latest
-    container_name: mongodb-broker
+    container_name: mongodb-broker-api
     environment:
-      - MONGODB_ROOT_PASSWORD=abc123456 # Đặt mật khẩu root cho MongoDB
-      - MONGODB_USER=user # Đặt tên người dùng cho MongoDB
-      - MONGODB_PASSWORD=ad123456 # Đặt mật khẩu cho người dùng MongoDB
-      - MONGODB_DATABASE=cloud  # Đặt database mặc định
+      - MONGODB_ROOT_PASSWORD=abc123456
+      - MONGODB_USERNAME=user            # <- đúng key của bitnami
+      - MONGODB_PASSWORD=ad123456
+      - MONGODB_DATABASE=cloud
     ports:
       - '27017:27017'
     volumes:
       - mongodb-data:/bitnami/mongodb/data
+    networks: [shoes-shop]
 
   redis:
     image: redis:7.2
-    container_name: redis-broker
+    container_name: redis-broker-api
     command: [ "redis-server" ]
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
+    networks: [shoes-shop]
 
   minio:
     image: minio/minio:latest
+    container_name: minio-api
     command: server /data --console-address ":9001"
-    ports:
-      - "9000:9000"
-      - "9002:9001"
-    volumes:
-      - ./data:/data
     environment:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: admin@2024
-
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./data:/data
+    restart: always
+    networks: [shoes-shop]
 
 volumes:
   mongodb-data:
     driver: local
   redis-data:
     driver: local
+
+networks:
+  shoes-shop:
+    driver: bridge
