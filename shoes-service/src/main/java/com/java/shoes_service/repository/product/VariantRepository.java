@@ -1,4 +1,4 @@
-package com.java.shoes_service.repository;
+package com.java.shoes_service.repository.product;
 
 
 import com.java.shoes_service.entity.product.VariantEntity;
@@ -11,5 +11,5 @@ import java.util.List;
 @Repository
 public interface VariantRepository extends MongoRepository<VariantEntity, String> {
     List<VariantEntity> findByProductId(String productId);
-
+    boolean existsByProductIdAndColorIgnoreCaseAndSize_Label(String productId, String color, String sizeLabel);
 }

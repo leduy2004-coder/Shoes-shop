@@ -1,4 +1,4 @@
-package com.java.shoes_service.service;
+package com.java.shoes_service.service.promotion;
 
 import com.java.ImageType;
 import com.java.shoes_service.dto.PageResponse;
