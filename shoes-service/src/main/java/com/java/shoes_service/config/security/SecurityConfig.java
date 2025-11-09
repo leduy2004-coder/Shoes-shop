@@ -28,7 +28,8 @@ public class SecurityConfig {
             "/products/get-by-id/*",
             "/products/search",
             "/banners/search",
-            "/banners/get-by-slot/*"
+            "/banners/get-by-slot/*",
+            "/reviews/get-by-product",
     };
 
     CorsConfigurationSource corsConfigurationSource;

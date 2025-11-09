@@ -1,10 +1,7 @@
 package com.java.shoes_service.entity.promotion;
 
 import com.java.shoes_service.entity.common.BaseEntity;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -13,6 +10,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Document(collection = "reviews")
+@Setter
+@Getter
 public class ReviewEntity extends BaseEntity {
     String productId;
     String userId;

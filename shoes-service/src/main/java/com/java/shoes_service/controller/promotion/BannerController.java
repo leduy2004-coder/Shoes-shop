@@ -3,12 +3,9 @@ package com.java.shoes_service.controller.promotion;
 
 import com.java.shoes_service.dto.ApiResponse;
 import com.java.shoes_service.dto.PageResponse;
-import com.java.shoes_service.dto.banner.BannerRequest;
-import com.java.shoes_service.dto.banner.BannerResponse;
-import com.java.shoes_service.dto.brand.BrandGetResponse;
-import com.java.shoes_service.dto.brand.BrandRequest;
+import com.java.shoes_service.dto.promotion.banner.BannerRequest;
+import com.java.shoes_service.dto.promotion.banner.BannerResponse;
 import com.java.shoes_service.service.BannerService;
-import com.java.shoes_service.service.BrandService;
 import com.java.shoes_service.utility.BannerSlot;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;

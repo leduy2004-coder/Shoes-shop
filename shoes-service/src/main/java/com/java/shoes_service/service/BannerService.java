@@ -2,11 +2,8 @@ package com.java.shoes_service.service;
 
 import com.java.ImageType;
 import com.java.shoes_service.dto.PageResponse;
-import com.java.shoes_service.dto.banner.BannerRequest;
-import com.java.shoes_service.dto.banner.BannerResponse;
-import com.java.shoes_service.dto.brand.BrandGetResponse;
-import com.java.shoes_service.dto.brand.BrandRequest;
-import com.java.shoes_service.entity.brand.BrandEntity;
+import com.java.shoes_service.dto.promotion.banner.BannerRequest;
+import com.java.shoes_service.dto.promotion.banner.BannerResponse;
 import com.java.shoes_service.entity.promotion.BannerEntity;
 import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
@@ -26,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
