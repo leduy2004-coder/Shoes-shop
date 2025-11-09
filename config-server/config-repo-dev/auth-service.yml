@@ -19,9 +19,9 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://root:abc123456@mongodb-broker-api:27017/auth-service?authSource=admin
+      uri: mongodb://root:abc123456@localhost:27017/auth-service?authSource=admin
     redis:
-      host: redis-broker-api
+      host: localhost
       port: 6379
       repositories:
         enabled: false
@@ -40,16 +40,17 @@ spring:
     oauth2:
       resource server:
         jwt:
-          issuer-uri: http://api-gateway:8080/issuer
+          issuer-uri: http://localhost:8080/issuer
 
 eureka:
   client:
     service-url:
-      defaultZone: http://eureka-server:8761/eureka/
+      defaultZone: http://localhost:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
   instance:
-    prefer-ip-address: false
+    prefer-ip-address: true
+    ip-address: 127.0.0.1
     non-secure-port: ${server.port}
     instance-id: ${spring.application.name}:${server.port}
 

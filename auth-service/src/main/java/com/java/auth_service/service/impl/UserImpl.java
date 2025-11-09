@@ -37,7 +37,7 @@ public class UserImpl implements UserService {
 
     @Override
     public UserEntity register(UserRequest userRequest) {
-       return insert(userRequest, "User");
+       return insert(userRequest, "USER");
     }
 
     public UserEntity insert(UserRequest userRequest, String role) {
