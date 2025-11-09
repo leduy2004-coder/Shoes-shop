@@ -1,18 +1,14 @@
-package com.java.shoes_service.service;
+package com.java.shoes_service.service.promotion;
 
 import com.java.shoes_service.dto.PageResponse;
-import com.java.shoes_service.dto.promotion.banner.BannerRequest;
-import com.java.shoes_service.dto.promotion.banner.BannerResponse;
 import com.java.shoes_service.dto.promotion.review.ReviewRequest;
 import com.java.shoes_service.dto.promotion.review.ReviewResponse;
-import com.java.shoes_service.entity.promotion.BannerEntity;
 import com.java.shoes_service.entity.promotion.ReviewEntity;
 import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
-import com.java.shoes_service.repository.ProductRepository;
-import com.java.shoes_service.repository.promotion.BannerRepository;
+import com.java.shoes_service.repository.product.ProductRepository;
 import com.java.shoes_service.repository.promotion.ReviewRepository;
-import com.java.shoes_service.utility.BannerSlot;
+import com.java.shoes_service.service.DateTimeFormatter;
 import com.java.shoes_service.utility.GetInfo;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +20,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor

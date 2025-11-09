@@ -5,7 +5,8 @@ import com.java.CloudinaryResponse;
 import com.java.shoes_service.dto.ApiResponse;
 import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.product.product.*;
-import com.java.shoes_service.service.ProductService;
+
+import com.java.shoes_service.service.product.ProductService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -64,7 +65,7 @@ public class ProductController {
                 .build();
     }
 
-    @PostMapping(value = "/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/create-product", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<ProductCreateResponse> createProduct(
             @RequestPart("request") ProductCreateRequest request,
             @RequestPart(value = "files", required = false) List<MultipartFile> files) {
@@ -73,6 +74,7 @@ public class ProductController {
                 .result(productService.createProduct(request, files))
                 .build();
     }
+
 
     @PatchMapping(value = "/update/content")
     public ApiResponse<ProductGetDetailResponse> updateProduct(@RequestBody ProductUpdateRequest request){

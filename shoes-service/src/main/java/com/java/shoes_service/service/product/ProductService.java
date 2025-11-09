@@ -1,22 +1,20 @@
-package com.java.shoes_service.service;
+package com.java.shoes_service.service.product;
 
 import com.java.CloudinaryResponse;
 import com.java.ImageType;
 import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.product.product.*;
-import com.java.shoes_service.dto.product.variant.VariantCreateRequest;
 import com.java.shoes_service.entity.brand.BrandEntity;
 import com.java.shoes_service.entity.product.CategoryEntity;
 import com.java.shoes_service.entity.product.ProductEntity;
-import com.java.shoes_service.entity.product.SizeLabel;
 import com.java.shoes_service.entity.product.VariantEntity;
 import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
-import com.java.shoes_service.repository.BrandRepository;
-import com.java.shoes_service.repository.CategoryRepository;
-import com.java.shoes_service.repository.ProductRepository;
-import com.java.shoes_service.repository.VariantRepository;
+import com.java.shoes_service.repository.*;
 import com.java.shoes_service.repository.httpClient.FileClient;
+import com.java.shoes_service.repository.product.HistoryProductRepository;
+import com.java.shoes_service.repository.product.ProductRepository;
+import com.java.shoes_service.repository.product.VariantRepository;
 import com.java.shoes_service.utility.ProductStatus;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +47,7 @@ public class ProductService {
     CategoryRepository categoryRepository;
     BrandRepository brandRepository;
     VariantRepository variantRepository;
+    HistoryProductRepository historyProductRepository;
 
     public PageResponse<ProductGetResponse> getAllProduct(int page, int size) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("createdDate").descending());
@@ -173,29 +172,9 @@ public class ProductService {
 
             product.setAverageRating(0);
 
-            int totalStock = (request.getVariants() == null) ? 0
-                    : request.getVariants().stream().mapToInt(VariantCreateRequest::getStock).sum();
-            product.setTotalStock(totalStock);
-
             ProductEntity entity = productRepository.save(product);
 
             String productId = entity.getId();
-
-            //save variants
-            request.getVariants().forEach(vReq -> {
-                VariantEntity ve = modelMapper.map(vReq, VariantEntity.class);
-                ve.setProductId(productId);
-                ve.setStatus(ProductStatus.ACTIVE);
-                ve.setCountSell(vReq.getCountSell());
-
-                //  gán size
-                SizeLabel size = SizeLabel.builder()
-                        .label(String.valueOf(vReq.getSize()))
-                        .build();
-                ve.setSize(size);
-
-                variantRepository.save(ve);
-            });
 
             //upload images
             List<CloudinaryResponse> imgUrls = (files == null ? List.<MultipartFile>of() : files).stream()

@@ -1,10 +1,7 @@
 package com.java.shoes_service.dto.product.product;
 
-import com.java.shoes_service.dto.product.variant.VariantCreateRequest;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.util.List;
 
 @Data
 @Builder
@@ -21,7 +18,5 @@ public class ProductCreateRequest {
     String description;
     double price;
     double discount;
-
-    List<VariantCreateRequest> variants;
 }
 

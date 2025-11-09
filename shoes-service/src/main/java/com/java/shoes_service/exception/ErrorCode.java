@@ -21,6 +21,7 @@ public enum ErrorCode {
     BRAND_NOT_FOUND(1853, "Brands not existed", HttpStatus.BAD_REQUEST),
     BANNER_NOT_FOUND(1854, "Banner not existed", HttpStatus.BAD_REQUEST),
     INVALID_REQUEST(1855, "Review not valid", HttpStatus.BAD_REQUEST),
+    VARIANT_NOT_FOUND(1856, "Variants not found", HttpStatus.BAD_REQUEST),
     USERNAME_INVALID(1003, "Username must be at least {min} characters", HttpStatus.BAD_REQUEST),
     INVALID_PASSWORD(1004, "Password must be at least {min} characters", HttpStatus.BAD_REQUEST),
     USER_NOT_EXISTED(1005, "User not existed", HttpStatus.NOT_FOUND), //404

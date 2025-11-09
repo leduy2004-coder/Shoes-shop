@@ -4,7 +4,7 @@ import com.java.shoes_service.dto.ApiResponse;
 import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.promotion.review.ReviewRequest;
 import com.java.shoes_service.dto.promotion.review.ReviewResponse;
-import com.java.shoes_service.service.ReviewService;
+import com.java.shoes_service.service.promotion.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

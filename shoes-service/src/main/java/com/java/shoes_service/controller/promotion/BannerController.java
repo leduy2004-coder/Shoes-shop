@@ -5,7 +5,7 @@ import com.java.shoes_service.dto.ApiResponse;
 import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.promotion.banner.BannerRequest;
 import com.java.shoes_service.dto.promotion.banner.BannerResponse;
-import com.java.shoes_service.service.BannerService;
+import com.java.shoes_service.service.promotion.BannerService;
 import com.java.shoes_service.utility.BannerSlot;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
