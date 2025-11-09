@@ -9,6 +9,7 @@ import com.java.shoes_service.entity.product.SizeLabel;
 import com.java.shoes_service.entity.product.VariantEntity;
 import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
+import com.java.shoes_service.repository.CartItemRepository;
 import com.java.shoes_service.repository.product.HistoryProductRepository;
 import com.java.shoes_service.repository.product.ProductRepository;
 import com.java.shoes_service.repository.product.VariantRepository;
@@ -23,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +41,7 @@ public class VariantService {
     ProductRepository productRepository;
     HistoryProductRepository historyProductRepository;
     ModelMapper modelMapper;
+    CartItemRepository cartItemRepository;
 
     public List<VariantResponse> createVariant(VariantCreateRequest request) {
         try {
@@ -223,5 +226,52 @@ public class VariantService {
                 p.getTotalPages(),
                 items
         );
+    }
+
+    public VariantResponse updateVariant(VariantUpdateRequest request) {
+        VariantEntity variant = variantRepository.findById(request.getId()).orElse(null);
+        if (variant == null) throw new AppException(ErrorCode.VARIANT_NOT_FOUND);
+        variant.setColor(request.getColor());
+        SizeLabel size = SizeLabel.builder()
+                .label(String.valueOf(request.getSize()))
+                .build();
+        variant.setSize(size);
+
+        VariantEntity saved = variantRepository.save(variant);
+        return modelMapper.map(saved, VariantResponse.class);
+    }
+    @Transactional
+    public boolean deleteVariant(String variantId) {
+        VariantEntity variant = variantRepository.findById(variantId)
+                .orElseThrow(() -> new AppException(ErrorCode.VARIANT_NOT_FOUND));
+
+        //  Nếu vẫn còn trong giỏ hàng -> không cho xoá
+        if (cartItemRepository.existsByVariant_Id(variantId)) {
+            throw new AppException(ErrorCode.VARIANT_IN_CART);
+        }
+
+        // Không còn cartItem nào tham chiếu -> xoá an toàn
+
+        // 1) Xoá history của variant (nếu có)
+        try {
+            historyProductRepository.deleteByVariantId(variantId);
+        } catch (Exception ignore) {
+            historyProductRepository.findByVariantId(variantId, PageRequest.of(0, Integer.MAX_VALUE))
+                    .forEach(h -> historyProductRepository.deleteById(h.getId()));
+        }
+
+        // 2) Xoá variant
+        String productId = variant.getProductId();
+        variantRepository.deleteById(variantId);
+
+        // 3) Recalc product.totalStock
+        List<VariantEntity> remain = variantRepository.findByProductId(productId);
+        int totalStock = remain.stream().mapToInt(VariantEntity::getStock).sum();
+        productRepository.findById(productId).ifPresent(p -> {
+            p.setTotalStock(totalStock);
+            productRepository.save(p);
+        });
+
+        return true;
     }
 }

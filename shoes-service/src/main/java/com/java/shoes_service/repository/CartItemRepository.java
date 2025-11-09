@@ -10,5 +10,6 @@ import java.util.List;
 public interface CartItemRepository extends MongoRepository<CartItemEntity, String> {
     List<CartItemEntity> findByCartId(String cartId);
     void deleteByCartId(String cartId);
+    boolean existsByVariant_Id(String variantId);
 }
 

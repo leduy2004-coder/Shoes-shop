@@ -2,10 +2,7 @@ package com.java.shoes_service.controller;
 
 import com.java.shoes_service.dto.ApiResponse;
 import com.java.shoes_service.dto.PageResponse;
-import com.java.shoes_service.dto.product.variant.VariantCreateRequest;
-import com.java.shoes_service.dto.product.variant.VariantHistoryResponse;
-import com.java.shoes_service.dto.product.variant.VariantResponse;
-import com.java.shoes_service.dto.product.variant.VariantStockImportListRequest;
+import com.java.shoes_service.dto.product.variant.*;
 import com.java.shoes_service.service.product.VariantService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +39,18 @@ public class VariantController {
         PageResponse<VariantHistoryResponse> res = variantService.getHistory(variantId, page, size);
         return ApiResponse.<PageResponse<VariantHistoryResponse>>builder()
                 .result(res)
+                .build();
+    }
+    @PutMapping(value = "/update")
+    public ApiResponse<VariantResponse> updateVariant(@RequestBody VariantUpdateRequest request) {
+        return ApiResponse.<VariantResponse>builder()
+                .result(variantService.updateVariant(request))
+                .build();
+    }
+    @DeleteMapping("/delete/{id}")
+    public ApiResponse<Boolean> deleteVariant(@PathVariable String id) {
+        return ApiResponse.<Boolean>builder()
+                .result(variantService.deleteVariant(id))
                 .build();
     }
 }
