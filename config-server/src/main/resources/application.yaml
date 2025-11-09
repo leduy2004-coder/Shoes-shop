@@ -10,6 +10,6 @@ spring:
         git:
           uri: "" # Tắt Git bằng cách để trống
         native:
-          search-locations: file:E:/SpringBoot/microservice/Shoes-shop/config-server/config-repo
+          search-locations: ${SEARCH_LOCATION}
   profiles:
     active: native
