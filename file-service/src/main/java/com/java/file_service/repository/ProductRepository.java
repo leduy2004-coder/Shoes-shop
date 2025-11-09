@@ -10,4 +10,6 @@ import java.util.List;
 @Repository
 public interface ProductRepository extends MongoRepository<ProductImageEntity, String> {
      List<ProductImageEntity> findAllByProductId(String productId);
+     ProductImageEntity findByName(String name);
+
 }

@@ -3,10 +3,7 @@ package com.java.shoes_service.service;
 import com.java.CloudinaryResponse;
 import com.java.ImageType;
 import com.java.shoes_service.dto.PageResponse;
-import com.java.shoes_service.dto.product.product.ProductCreateRequest;
-import com.java.shoes_service.dto.product.product.ProductCreateResponse;
-import com.java.shoes_service.dto.product.product.ProductGetDetailResponse;
-import com.java.shoes_service.dto.product.product.ProductGetResponse;
+import com.java.shoes_service.dto.product.product.*;
 import com.java.shoes_service.dto.product.variant.VariantCreateRequest;
 import com.java.shoes_service.entity.brand.BrandEntity;
 import com.java.shoes_service.entity.product.CategoryEntity;
@@ -219,6 +216,75 @@ public class ProductService {
         }
     }
 
+    public ProductGetDetailResponse updateContentProduct(ProductUpdateRequest request) {
+
+        ProductEntity entity = productRepository.findById(request.getProductId())
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
+
+        // Patch từng field nếu không null (hoặc dùng Optional.ofNullable)
+        if (request.getCategoryId() != null && !request.getCategoryId().isBlank()) {
+            CategoryEntity category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
+            entity.setCategory(category);
+        }
+        if (request.getBrandId() != null && !request.getBrandId().isBlank()) {
+            BrandEntity brand = brandRepository.findById(request.getBrandId())
+                    .orElseThrow(() -> new AppException(ErrorCode.BRAND_NOT_FOUND));
+            entity.setBrand(brand);
+        }
+        if (request.getName() != null)        entity.setName(request.getName());
+        if (request.getSlug() != null)        entity.setSlug(request.getSlug());
+        if (request.getDescription() != null) entity.setDescription(request.getDescription());
+        if (request.getPrice() > 0)           entity.setPrice(request.getPrice());
+        // discount có thể = 0, nên patch theo null-check: dùng Double để nhận null nếu muốn
+        entity.setDiscount(request.getDiscount());
+
+        // Lưu lại
+        entity = productRepository.save(entity);
+
+        // Build detail response (product + variants + list images)
+        ProductGetResponse productDto = modelMapper.map(entity, ProductGetResponse.class);
+        List<VariantEntity> variants = variantRepository.findByProductId(entity.getId());
+        List<CloudinaryResponse> images = fileClient.getImage(entity.getId(), ImageType.PRODUCT).getResult();
+
+        return ProductGetDetailResponse.builder()
+                .product(productDto)
+                .variants(variants)
+                .listImg(images)
+                .build();
+    }
+
+    public List<CloudinaryResponse> updateImageProduct(ProductUpdateImageRequest request,
+                                                       List<MultipartFile> files) {
+
+        // validate product
+        if (!productRepository.existsById(request.getProductId())) {
+            throw new AppException(ErrorCode.PRODUCT_NOT_EXISTED);
+        }
+
+        // 1) Xoá ảnh cũ theo danh sách name
+        if (request.getNames() != null && !request.getNames().isEmpty()) {
+            for (String name : request.getNames()) {
+                if (name != null && !name.isBlank()) {
+                    try {
+                        fileClient.deleteByNameImage(name, ImageType.PRODUCT);
+                    } catch (Exception ex) {
+                        log.warn("Cannot delete image name={} of productId={}: {}", name, request.getProductId(), ex.getMessage());
+                    }
+                }
+            }
+        }
+
+        // 2) Upload ảnh mới (nếu có)
+        if (files != null && !files.isEmpty()) {
+            for (MultipartFile f : files) {
+                if (f != null && !f.isEmpty()) {
+                    fileClient.uploadMediaProduct(f, request.getProductId());
+                }
+            }
+        }
+        return fileClient.getImage(request.getProductId(), ImageType.PRODUCT).getResult();
+    }
     private ProductGetResponse mapToProductGetResponse(ProductEntity entity) {
         ProductGetResponse response = modelMapper.map(entity, ProductGetResponse.class);
         response.setImageUrl(fileClient.getImage(entity.getId(), ImageType.PRODUCT).getResult().get(0));

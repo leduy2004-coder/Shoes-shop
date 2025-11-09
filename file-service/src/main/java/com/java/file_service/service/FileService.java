@@ -158,6 +158,12 @@ public class FileService {
             bannerRepository.deleteById(image.getId());
             return true;
         }
+        else if (imageType.equals(ImageType.PRODUCT)){
+            ProductImageEntity image = productRepository.findByName(name);
+            minioService.delete(name);
+            productRepository.deleteById(image.getId());
+            return true;
+        }
         return false;
 
     }
