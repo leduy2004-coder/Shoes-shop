@@ -1,6 +1,7 @@
 package com.java.file_service.utility;
 
 
+import com.java.file_service.config.properties.MinioProperties;
 import io.minio.BucketExistsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
@@ -17,7 +18,6 @@ import org.springframework.stereotype.Component;
 public class MinioChannel {
     private static final String BUCKET = "resources";
     private final MinioClient minioClient;
-
     @PostConstruct
     private void init() {
         createBucket(BUCKET);

@@ -10,6 +10,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,7 +24,7 @@ public class CategoryController {
     CategoryService categoryService;
 
 
-    @GetMapping
+    @GetMapping("/get-all")
     public ApiResponse<List<CategoryGetResponse>> getAllCategories() {
         List<CategoryGetResponse> data = categoryService.getParentsWithChildren();
         return ApiResponse.<List<CategoryGetResponse>>builder()
@@ -39,6 +40,7 @@ public class CategoryController {
                 .build();
     }
 
+
     @GetMapping("/get-all-parent")
     public ApiResponse<List<CategoryResponse>> getAllParentCategories() {
         List<CategoryResponse> data = categoryService.getOnlyParents();
@@ -47,6 +49,7 @@ public class CategoryController {
                 .build();
     }
 
+    @PreAuthorize("hasAnyAuthority('ADMIN')")
     @PostMapping("/create")
     public ApiResponse<CategoryResponse> create(@RequestBody CategoryRequest request) {
         CategoryResponse response = categoryService.create(request);

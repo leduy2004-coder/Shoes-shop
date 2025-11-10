@@ -14,4 +14,5 @@ public class MinioProperties {
     String accessKey;
     String secretKey;
     String endpoint;
+    String publicUrl;
 }

@@ -25,7 +25,7 @@ import java.util.List;
 public class ProductController {
     ProductService productService;
 
-    @GetMapping
+    @GetMapping("/get-all")
     public ApiResponse<PageResponse<ProductGetResponse>> getAllProduct(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
