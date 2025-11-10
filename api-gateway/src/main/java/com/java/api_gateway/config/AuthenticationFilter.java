@@ -43,9 +43,11 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             "/shoes/products/get-by-id/.*",
             "/shoes/products/search",
             "/shoes/products/top-rated",
+            "/shoes/products/get-all",
             "/shoes/banners/search",
             "/shoes/banners/get-by-slot/.*",
             "/shoes/reviews/get-by-product",
+            "/shoes/categories/.*",
     };
 
     @Value("${app.api-prefix}")

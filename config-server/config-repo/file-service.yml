@@ -8,6 +8,7 @@ minio:
   access-key: admin
   secret-key: admin@2024
   bucket-name: resources
+  public-url: http://localhost:9000
 spring:
   application:
     name: file-service

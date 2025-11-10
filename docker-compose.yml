@@ -189,7 +189,6 @@ services:
   minio:
     image: minio/minio:latest
     container_name: minio-api
-    command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: admin@2024
@@ -199,7 +198,16 @@ services:
     volumes:
       - ./data:/data
     restart: always
-    networks: [shoes-shop]
+    networks: [ shoes-shop ]
+    entrypoint: >
+      sh -c "
+      mkdir -p /data/resources &&
+      minio server /data --console-address ':9001' &
+      sleep 5 &&
+      mc alias set myminio http://localhost:9000 admin admin@2024 &&
+      mc anonymous set download myminio/resources &&
+      wait
+      "
 
 volumes:
   mongodb-data:

@@ -1,5 +1,6 @@
 package com.java.file_service.service;
 
+import com.java.file_service.config.properties.MinioProperties;
 import com.java.file_service.exception.AppException;
 import com.java.file_service.utility.ConverterUtils;
 import io.minio.GetObjectArgs;
@@ -25,6 +26,7 @@ import static com.java.file_service.exception.ErrorCode.UPLOAD_FAILED;
 public class MinioService {
     private static final String BUCKET = "resources";
     private final MinioClient minioClient;
+    private final MinioProperties minioProperties;
 
     @SneakyThrows
     public String upload(@NonNull final MultipartFile file, String fileName) {
@@ -34,21 +36,23 @@ public class MinioService {
                     PutObjectArgs.builder()
                             .bucket(BUCKET)
                             .object(fileName)
-                            .contentType(Objects.isNull(file.getContentType()) ? "image/png; image/jpg;" : file.getContentType())
+                            .contentType(Objects.isNull(file.getContentType()) ? "image/png" : file.getContentType())
                             .stream(file.getInputStream(), file.getSize(), -1)
                             .build()
             );
         } catch (Exception ex) {
-            log.error("Error saving image \n {} ", ex.getMessage());
+            log.error("Error saving image: {}", ex.getMessage());
             throw new AppException(UPLOAD_FAILED);
         }
-        return minioClient.getPresignedObjectUrl(
-                io.minio.GetPresignedObjectUrlArgs.builder()
-                        .method(io.minio.http.Method.GET)
-                        .bucket(BUCKET)
-                        .object(fileName)
-                        .build()
-        );
+
+        // ✅ Trả về URL public đơn giản (không có chữ ký)
+        String publicUrl = String.format("%s/%s/%s",
+                minioProperties.getPublicUrl(),
+                BUCKET,
+                fileName);
+
+        log.info("Generated public URL: {}", publicUrl);
+        return publicUrl;
     }
 
     public byte[] download(String bucket, String name) {
