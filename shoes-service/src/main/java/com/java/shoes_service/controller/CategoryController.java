@@ -31,7 +31,7 @@ public class CategoryController {
                 .build();
     }
 
-    @PreAuthorize("hasAnyAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
     public ApiResponse<CategoryResponse> create(@RequestBody CategoryRequest request) {
         CategoryResponse response = categoryService.create(request);
@@ -40,7 +40,7 @@ public class CategoryController {
                 .build();
     }
 
-    @PreAuthorize("hasAnyAuthority('ADMIN')")
+
     @PutMapping("/update/{id}")
     public ApiResponse<CategoryResponse> update(@PathVariable String id,
                                                 @RequestBody CategoryRequest request) {
@@ -50,7 +50,7 @@ public class CategoryController {
                 .build();
     }
 
-    @PreAuthorize("hasAnyAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/delete/{id}")
     public ApiResponse<Boolean> delete(@PathVariable String id) {
         Boolean deleted = categoryService.delete(id);

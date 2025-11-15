@@ -25,7 +25,7 @@ import java.util.List;
 public class BrandController {
     BrandService brandService;
 
-    @GetMapping
+    @GetMapping("/search")
     public ApiResponse<PageResponse<BrandGetResponse>> searchBrands(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -41,7 +41,7 @@ public class BrandController {
                 .build();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/detail/{id}")
     public ApiResponse<BrandGetResponse> getBrandById(@PathVariable String id) {
         BrandGetResponse response = brandService.getBrandById(id);
         return ApiResponse.<BrandGetResponse>builder()
