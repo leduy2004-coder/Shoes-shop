@@ -9,13 +9,10 @@ import java.util.List;
 
 public interface UserService {
     UserEntity register(UserRequest userDto);
-    Boolean delete(String id);
+    Boolean delete(List<String> ids);
     UserResponse findById(String id);
     UserResponse addUser(UserRequest userDto);
     List<UserResponse> findAll();
     UserResponse findByEmail(String userName);
     UserResponse updateUser(UserUpdateRequest userRequest);
-
-
-
 }

@@ -10,7 +10,6 @@ import com.java.auth_service.exception.ErrorCode;
 import com.java.auth_service.repository.UserRepository;
 import com.java.auth_service.service.RoleService;
 import com.java.auth_service.service.UserService;
-import com.java.auth_service.utility.GetInfo;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -21,7 +20,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 
 @Service
@@ -58,15 +56,18 @@ public class UserImpl implements UserService {
 
     @PreAuthorize("hasRole('ADMIN')")
     @Override
-    public Boolean delete(String id) {
+    public Boolean delete(List<String> ids) {
         try {
-            Optional<UserEntity> entity = userRepository.findById(id);
-            if (entity.isPresent()) {
-                userRepository.deleteById(id);
-                return true;
-            } else {
+            if (ids == null || ids.isEmpty()) {
                 return false;
             }
+            List<UserEntity> users = userRepository.findAllById(ids);
+            if (users.isEmpty()) {
+                return false;
+            }
+
+            userRepository.deleteAll(users);
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
             return false;
@@ -75,15 +76,15 @@ public class UserImpl implements UserService {
 
     @Override
     public UserResponse findById(String id) {
-        UserEntity user = userRepository.findById(id)
+        UserEntity user = userRepository.findByIdAndStatusTrue(id)
                 .orElse(null);
+
         if (user == null) {
             return null;
         }
-        UserResponse userResponse = modelMapper.map(user, UserResponse.class);
-        return userResponse;
-    }
 
+        return modelMapper.map(user, UserResponse.class);
+    }
 
     @Override
     public UserResponse findByEmail(String userName) {
@@ -105,7 +106,6 @@ public class UserImpl implements UserService {
         return mapUserEntitiesToResponses(list);
     }
 
-
     @Override
     public UserResponse updateUser(UserUpdateRequest userRequest) {
         UserEntity userEntity = userRepository.findById(userRequest.getId()).orElseThrow();
@@ -116,7 +116,6 @@ public class UserImpl implements UserService {
         UserEntity user = userRepository.save(userEntity);
         return modelMapper.map(user, UserResponse.class);
     }
-
 
     public List<UserResponse> mapUserEntitiesToResponses(List<UserEntity> userEntities) {
         return userEntities.stream()
