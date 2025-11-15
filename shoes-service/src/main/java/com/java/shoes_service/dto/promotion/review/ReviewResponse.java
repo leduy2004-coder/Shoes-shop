@@ -1,5 +1,6 @@
 package com.java.shoes_service.dto.promotion.review;
 
+import com.java.ProfileGetResponse;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -13,7 +14,7 @@ import lombok.experimental.FieldDefaults;
 public class ReviewResponse {
     String id;
     String productId;
-    String userId;
+    ProfileGetResponse user;
     int rating;
     String comment;
     String created;

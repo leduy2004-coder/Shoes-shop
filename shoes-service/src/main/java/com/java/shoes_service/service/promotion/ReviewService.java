@@ -6,6 +6,7 @@ import com.java.shoes_service.dto.promotion.review.ReviewResponse;
 import com.java.shoes_service.entity.promotion.ReviewEntity;
 import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
+import com.java.shoes_service.repository.httpClient.ProfileClient;
 import com.java.shoes_service.repository.product.ProductRepository;
 import com.java.shoes_service.repository.promotion.ReviewRepository;
 import com.java.shoes_service.service.DateTimeFormatter;
@@ -33,6 +34,7 @@ public class ReviewService {
     ProductRepository productRepository;
     ModelMapper modelMapper;
     DateTimeFormatter dateTimeFormatter;
+    ProfileClient profileClient;
 
     public PageResponse<ReviewResponse> getReviewByProduct(
             int page, int size, String sort, String productId
@@ -108,6 +110,7 @@ public class ReviewService {
 
     private ReviewResponse toDto(ReviewEntity e) {
         ReviewResponse dto = modelMapper.map(e, ReviewResponse.class);
+        dto.setUser(profileClient.getProfile(e.getUserId()).getResult());
         dto.setCreated(dateTimeFormatter.format(e.getCreatedDate()));
         return dto;
     }
