@@ -27,7 +27,7 @@ public class ProductGetResponse {
     double discount;
     int totalStock;
     ProductStatus status;
-
+    int countSell;
     Instant createdDate;
     int averageRating;
     Instant modifiedDate;

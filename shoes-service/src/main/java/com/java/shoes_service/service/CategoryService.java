@@ -1,24 +1,19 @@
 package com.java.shoes_service.service;
 
-import com.java.shoes_service.dto.brand.BrandGetResponse;
-import com.java.shoes_service.dto.brand.BrandRequest;
 import com.java.shoes_service.dto.category.CategoryGetResponse;
 import com.java.shoes_service.dto.category.CategoryRequest;
 import com.java.shoes_service.dto.category.CategoryResponse;
-import com.java.shoes_service.entity.brand.BrandEntity;
 import com.java.shoes_service.entity.product.CategoryEntity;
-import com.java.shoes_service.repository.CategoryRepository;
+import com.java.shoes_service.repository.product.CategoryRepository;
+import com.java.shoes_service.repository.product.ProductRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,62 +22,57 @@ import java.util.stream.Collectors;
 public class CategoryService {
 
     CategoryRepository categoryRepository;
+    ProductRepository productRepository;
     ModelMapper modelMapper;
 
-    public CategoryGetResponse getChildrenByParentId(String parentId) {
-        CategoryEntity parent = categoryRepository.findById(parentId)
-                .orElseThrow(() -> new RuntimeException("Category not found: " + parentId));
 
-        // map parent
-        CategoryGetResponse dto = modelMapper.map(parent, CategoryGetResponse.class);
+    public List<CategoryGetResponse> getAll() {
+        List<CategoryEntity> categories = categoryRepository.findAll();
 
-        // map children
-        List<CategoryResponse> children = categoryRepository.findByParentId(parentId).stream()
-                .map(e -> modelMapper.map(e, CategoryResponse.class))
-                .toList();
+        return categories.stream()
+                .map(category -> {
+                    long count = productRepository.countByCategory_Id(category.getId());
 
-        dto.setChildren(children);
-        return dto;
-    }
-
-
-    public List<CategoryGetResponse> getParentsWithChildren() {
-        // Lấy tất cả cha
-        List<CategoryEntity> roots = categoryRepository.findByParentIdIsNull();
-        if (roots.isEmpty()) return List.of();
-
-        // Lấy tất cả children của các cha (1 lần)
-        List<String> rootIds = roots.stream().map(CategoryEntity::getId).toList();
-        List<CategoryEntity> allChildren = categoryRepository.findByParentIdIn(rootIds);
-
-        // Group children theo parentId
-        Map<String, List<CategoryResponse>> childrenMap = allChildren.stream()
-                .map(ch -> modelMapper.map(ch, CategoryResponse.class))
-                .collect(Collectors.groupingBy(CategoryResponse::getParentId));
-
-        // Map cha -> DTO và gắn children
-        return roots.stream()
-                .map(root -> {
-                    CategoryGetResponse dto = modelMapper.map(root, CategoryGetResponse.class);
-                    dto.setChildren(childrenMap.getOrDefault(root.getId(), List.of()));
-                    return dto;
+                    return CategoryGetResponse.builder()
+                            .id(category.getId())
+                            .name(category.getName())
+                            .description(category.getDescription())
+                            .countProduct(count)
+                            .build();
                 })
                 .toList();
     }
 
-    public List<CategoryResponse> getOnlyParents() {
-        return categoryRepository.findByParentIdIsNull()
-                .stream()
-                .map(e -> modelMapper.map(e, CategoryResponse.class))
-                .toList();
-    }
-
-    public CategoryResponse create(CategoryRequest request){
+    public CategoryResponse create(CategoryRequest request) {
         CategoryEntity category = modelMapper.map(request, CategoryEntity.class);
         category = categoryRepository.save(category);
         return modelMapper.map(category, CategoryResponse.class);
     }
 
 
+    public CategoryResponse update(String id, CategoryRequest request) {
+        CategoryEntity category = categoryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Category not found: " + id));
 
+        category.setName(request.getName());
+        category.setDescription(request.getDescription());
+
+        category = categoryRepository.save(category);
+        return modelMapper.map(category, CategoryResponse.class);
+    }
+
+    public Boolean delete(String id) {
+
+        long count = productRepository.countByCategory_Id(id);
+        if (count > 0) {
+            return false;
+        }
+
+        if (!categoryRepository.existsById(id)) {
+            return false;
+        }
+
+        categoryRepository.deleteById(id);
+        return true;
+    }
 }
