@@ -3,10 +3,9 @@ package com.java.auth_service.controller;
 
 import com.java.auth_service.dto.ApiResponse;
 import com.java.auth_service.dto.request.UserRequest;
-import com.java.auth_service.dto.response.AuthenticationResponse;
+import com.java.auth_service.dto.request.UserUpdateRequest;
 import com.java.auth_service.dto.response.UserResponse;
 import com.java.auth_service.service.UserService;
-import com.java.auth_service.service.security.AuthenticationService;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -27,7 +26,6 @@ public class UserController {
         return ApiResponse.<List<UserResponse>>builder().result(list).build();
     }
 
-
     @GetMapping("/get-user")
     public ApiResponse<UserResponse> getUser(@RequestParam(value = "id") String id) {
         UserResponse userResponse = userService.findById(id);
@@ -40,9 +38,16 @@ public class UserController {
     ) {
         return ApiResponse.<UserResponse>builder().result(userService.addUser(request)).build();
     }
+
+    @PostMapping("/update-user")
+    public ApiResponse<UserResponse> update(@RequestBody UserUpdateRequest request) {
+        return ApiResponse.<UserResponse>builder().result(userService.updateUser(request)).build();
+    }
+
     @DeleteMapping("/delete-user")
-    public ApiResponse<Boolean> deleteUser(@RequestParam(value = "id") String id) {
-        Boolean status = userService.delete(id);
+    public ApiResponse<Boolean> deleteUser(@RequestBody List<String> ids) {
+        Boolean status = userService.delete(ids);
         return ApiResponse.<Boolean>builder().result(status).build();
     }
+
 }

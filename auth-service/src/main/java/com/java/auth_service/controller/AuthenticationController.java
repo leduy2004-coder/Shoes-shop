@@ -4,6 +4,7 @@ import com.java.IntrospectRequest;
 import com.java.IntrospectResponse;
 import com.java.auth_service.dto.ApiResponse;
 import com.java.auth_service.dto.request.AuthenticationRequest;
+import com.java.auth_service.dto.request.ChangePassRequest;
 import com.java.auth_service.dto.request.UserRequest;
 import com.java.auth_service.dto.response.AuthenticationResponse;
 import com.java.auth_service.service.security.AuthenticationService;
@@ -51,6 +52,10 @@ public class AuthenticationController {
             HttpServletResponse response
     ) throws IOException {
         return ApiResponse.<AuthenticationResponse>builder().result(service.refreshToken(request, response)).build();
+    }
+    @PostMapping("/change-pass")
+    public ApiResponse<Boolean> changePass(@RequestBody ChangePassRequest request) {
+        return ApiResponse.<Boolean>builder().result(service.changePassword(request)).build();
     }
 
 }

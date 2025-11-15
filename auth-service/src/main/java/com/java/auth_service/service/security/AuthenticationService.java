@@ -3,6 +3,7 @@ package com.java.auth_service.service.security;
 import com.java.IntrospectRequest;
 import com.java.IntrospectResponse;
 import com.java.auth_service.dto.request.AuthenticationRequest;
+import com.java.auth_service.dto.request.ChangePassRequest;
 import com.java.auth_service.dto.request.UserRequest;
 import com.java.auth_service.dto.response.AuthenticationResponse;
 import com.java.auth_service.dto.response.RoleResponse;
@@ -14,6 +15,7 @@ import com.java.auth_service.repository.UserRepository;
 import com.java.auth_service.service.UserService;
 import com.java.auth_service.service.impl.JwtService;
 import com.java.auth_service.service.redis.TokenRedisService;
+import com.java.auth_service.utility.GetInfo;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,6 +34,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -170,6 +173,34 @@ public class AuthenticationService {
             }
 
         } catch (Exception e) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+    }
+
+    public Boolean changePassword(ChangePassRequest changePassRequest) {
+        try {
+            UserEntity user = userRepository.findById(Objects.requireNonNull(GetInfo.getLoggedInUserName()))
+                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+            PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
+            boolean matched = passwordEncoder.matches(changePassRequest.getPassword(), user.getPassword());
+
+            if (!matched) {
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            }
+
+            if (passwordEncoder.matches(changePassRequest.getNewPass(), user.getPassword())) {
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            }
+
+            user.setPassword(passwordEncoder.encode(changePassRequest.getNewPass()));
+            userRepository.save(user);
+
+            return true;
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error when change password: ", e);
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
     }
