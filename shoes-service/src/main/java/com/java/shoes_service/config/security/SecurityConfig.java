@@ -30,6 +30,8 @@ public class SecurityConfig {
             "/products/top-rated",
             "/products/get-all",
             "/banners/search",
+            "/brands/detail/*",
+            "/brands/search",
             "/banners/get-by-slot/*",
             "/reviews/get-by-product",
             "/categories/*"

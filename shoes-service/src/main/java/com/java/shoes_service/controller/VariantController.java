@@ -3,6 +3,7 @@ package com.java.shoes_service.controller;
 import com.java.shoes_service.dto.ApiResponse;
 import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.product.variant.*;
+import com.java.shoes_service.service.product.UserVariantService;
 import com.java.shoes_service.service.product.VariantService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class VariantController {
     VariantService variantService;
-
+    UserVariantService userVariantService;
 
     @PostMapping(value = "/create-variant")
     public ApiResponse<List<VariantResponse>> createVariant(@RequestBody VariantCreateRequest request) {
@@ -53,4 +54,13 @@ public class VariantController {
                 .result(variantService.deleteVariant(id))
                 .build();
     }
+
+    @PostMapping("/buy")
+    public ApiResponse<List<UserVariantResponse>> buyVariant(@RequestBody List<UserVariantRequest> request) {
+        List<UserVariantResponse> response = userVariantService.buyVariant(request);
+        return ApiResponse.<List<UserVariantResponse>>builder()
+                .result(response)
+                .build();
+    }
 }
+

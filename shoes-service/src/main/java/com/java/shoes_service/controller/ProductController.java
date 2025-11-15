@@ -7,11 +7,13 @@ import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.product.product.*;
 
 import com.java.shoes_service.service.product.ProductService;
+import com.java.shoes_service.service.product.UserVariantService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,6 +26,7 @@ import java.util.List;
 @RequestMapping("/products")
 public class ProductController {
     ProductService productService;
+    UserVariantService userVariantService;
 
     @GetMapping("/get-all")
     public ApiResponse<PageResponse<ProductGetResponse>> getAllProduct(
@@ -108,6 +111,16 @@ public class ProductController {
 
         return ApiResponse.<Boolean>builder()
                 .result(productService.deleteProduct(productId))
+                .build();
+    }
+
+    @GetMapping("/purchased")
+    public ApiResponse<List<UserPurchasedItemResponse>> getPurchasedByUser(
+            @RequestParam("userId") String userId
+    ) {
+        List<UserPurchasedItemResponse> data = userVariantService.getPurchasedByUser(userId);
+        return ApiResponse.<List<UserPurchasedItemResponse>>builder()
+                .result(data)
                 .build();
     }
 }
