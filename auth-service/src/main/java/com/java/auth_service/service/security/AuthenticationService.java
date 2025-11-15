@@ -12,10 +12,12 @@ import com.java.auth_service.entity.UserEntity;
 import com.java.auth_service.exception.AppException;
 import com.java.auth_service.exception.ErrorCode;
 import com.java.auth_service.repository.UserRepository;
+import com.java.auth_service.service.EmailService;
 import com.java.auth_service.service.UserService;
 import com.java.auth_service.service.impl.JwtService;
 import com.java.auth_service.service.redis.TokenRedisService;
 import com.java.auth_service.utility.GetInfo;
+import com.java.auth_service.utility.enumUtils.OtpStatus;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,13 +48,13 @@ public class AuthenticationService {
     UserRepository userRepository;
     TokenRedisService tokenRedisService;
     ModelMapper modelMapper;
-//    KafkaTemplate<String, Object> kafkaTemplate;
+    EmailService emailService;
 
     @NonFinal
     @Value("${spring.application.security.jwt.secret-key}")
     protected String SIGNER_KEY;
 
-    public IntrospectResponse introspect(IntrospectRequest request)  {
+    public IntrospectResponse introspect(IntrospectRequest request) {
         var token = request.getToken();
         boolean isValid = true;
 
@@ -65,19 +67,10 @@ public class AuthenticationService {
         return IntrospectResponse.builder().valid(isValid).build();
     }
 
-    public AuthenticationResponse register(UserRequest request) {
-        UserEntity userSaver = userService.register(request);
-
-        UserRegisterResponse userRegisterResponse = modelMapper.map(userSaver, UserRegisterResponse.class);
-        userRegisterResponse.setRole(userSaver.getRole().getCode());
-        var jwtToken = jwtService.generateToken(userSaver);
-        var refreshToken = jwtService.generateRefreshToken(userSaver);
-        tokenRedisService.saveRefreshToken(userSaver.getId(), refreshToken);
-        return AuthenticationResponse.builder()
-                .user(userRegisterResponse)
-                .accessToken(jwtToken)
-                .refreshToken(refreshToken)
-                .build();
+    public Boolean register(UserRequest request) {
+        userService.register(request);
+        emailService.sendOtp(request.getEmail());
+        return true;
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
@@ -88,7 +81,7 @@ public class AuthenticationService {
         UserRegisterResponse userRegisterResponse;
         try {
             PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
-            user = userRepository.findByEmail(request.getEmail()).orElse(null);
+            user = userRepository.findByEmailAndStatusTrue(request.getEmail()).orElse(null);
 
             assert user != null;
             boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
@@ -179,30 +172,61 @@ public class AuthenticationService {
 
     public Boolean changePassword(ChangePassRequest changePassRequest) {
         try {
-            UserEntity user = userRepository.findById(Objects.requireNonNull(GetInfo.getLoggedInUserName()))
+            PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
+
+            String email = changePassRequest.getEmail();
+
+            UserEntity user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-            PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
-            boolean matched = passwordEncoder.matches(changePassRequest.getPassword(), user.getPassword());
+            if (changePassRequest.getStatus() == OtpStatus.CHANGE_PASS) {
 
-            if (!matched) {
-                throw new AppException(ErrorCode.UNAUTHENTICATED);
+                boolean matched = passwordEncoder.matches(
+                        changePassRequest.getPassword(),
+                        user.getPassword()
+                );
+
+                if (!matched) {
+                    throw new AppException(ErrorCode.PASSWORD_WRONG);
+                }
+
+                if (passwordEncoder.matches(changePassRequest.getNewPass(), user.getPassword())) {
+                    throw new AppException(ErrorCode.PASSWORD_NOT_SAME);
+                }
             }
-
-            if (passwordEncoder.matches(changePassRequest.getNewPass(), user.getPassword())) {
-                throw new AppException(ErrorCode.UNAUTHENTICATED);
-            }
-
             user.setPassword(passwordEncoder.encode(changePassRequest.getNewPass()));
             userRepository.save(user);
 
             return true;
+
         } catch (AppException e) {
             throw e;
         } catch (Exception e) {
             log.error("Error when change password: ", e);
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
+    }
+
+    public boolean checkOTPRegister(String otp, String email, OtpStatus status) {
+        boolean check = emailService.checkOTP(otp, email);
+        if (check) {
+            if (status == OtpStatus.REGISTER){
+                UserEntity user = userRepository.findByEmail(email).orElse(null);
+                if (user == null) throw new AppException(ErrorCode.USER_NOT_EXISTED);
+
+                user.setStatus(true);
+                userRepository.save(user);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public boolean sendOtp(String email) {
+        UserEntity user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) throw new AppException(ErrorCode.USER_NOT_EXISTED);
+        emailService.sendOtp(email);
+        return true;
     }
 
 }

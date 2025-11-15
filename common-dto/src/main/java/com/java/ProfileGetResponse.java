@@ -12,6 +12,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ProfileGetResponse {
     String id;
-    String nickName;
+    String name;
     String email;
 }

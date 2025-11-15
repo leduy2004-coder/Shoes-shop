@@ -35,23 +35,24 @@ public class UserImpl implements UserService {
 
     @Override
     public UserEntity register(UserRequest userRequest) {
-       return insert(userRequest, "USER");
+       return insert(userRequest, "USER", false);
     }
 
-    public UserEntity insert(UserRequest userRequest, String role) {
+    public UserEntity insert(UserRequest userRequest, String role, Boolean isAdmin) {
         if (userRepository.findByEmail(userRequest.getEmail()).isPresent())
             throw new AppException(ErrorCode.USER_EXISTED);
 
         UserEntity userEntity = modelMapper.map(userRequest, UserEntity.class);
         userEntity.setRole(modelMapper.map(roleService.findByCode(role), RoleEntity.class));
-        userEntity.setStatus(true);
+        userEntity.setStatus(false);
+        if (isAdmin) userEntity.setStatus(true);
         userEntity.setPassword(passwordEncoder.encode(userRequest.getPassword()));
         return userRepository.save(userEntity);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     public UserResponse addUser(UserRequest userRequest) {
-        return modelMapper.map(insert(userRequest, userRequest.getRole().getCode()), UserResponse.class);
+        return modelMapper.map(insert(userRequest, userRequest.getRole().getCode(), true), UserResponse.class);
     }
 
     @PreAuthorize("hasRole('ADMIN')")

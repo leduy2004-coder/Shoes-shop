@@ -30,7 +30,10 @@ public class SecurityConfig {
             "/register",
             "/login",
             "/introspect",
-            "/refresh"
+            "/refresh",
+            "/email/*",
+            "/change-pass",
+            "/internal/users/*"
     };
 
     LogoutHandler logoutHandler;
