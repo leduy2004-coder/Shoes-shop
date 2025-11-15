@@ -15,5 +15,4 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class CategoryEntity extends BaseEntity {
     String name;
     String description;
-    String parentId;
 }

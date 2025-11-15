@@ -1,16 +1,12 @@
-package com.java.shoes_service.repository;
+package com.java.shoes_service.repository.product;
 
 
 import com.java.shoes_service.entity.product.CategoryEntity;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
 
 @Repository
 public interface CategoryRepository extends MongoRepository<CategoryEntity, String> {
-    List<CategoryEntity> findByParentId(String parentId);
-    List<CategoryEntity> findByParentIdIsNull();
-    List<CategoryEntity> findByParentIdIn(List<String> parentIds);
+
 }

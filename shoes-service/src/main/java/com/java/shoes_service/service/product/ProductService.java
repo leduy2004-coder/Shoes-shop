@@ -12,6 +12,7 @@ import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
 import com.java.shoes_service.repository.*;
 import com.java.shoes_service.repository.httpClient.FileClient;
+import com.java.shoes_service.repository.product.CategoryRepository;
 import com.java.shoes_service.repository.product.HistoryProductRepository;
 import com.java.shoes_service.repository.product.ProductRepository;
 import com.java.shoes_service.repository.product.VariantRepository;

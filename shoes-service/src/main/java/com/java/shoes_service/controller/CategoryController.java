@@ -23,28 +23,10 @@ import java.util.List;
 public class CategoryController {
     CategoryService categoryService;
 
-
     @GetMapping("/get-all")
     public ApiResponse<List<CategoryGetResponse>> getAllCategories() {
-        List<CategoryGetResponse> data = categoryService.getParentsWithChildren();
+        List<CategoryGetResponse> data = categoryService.getAll();
         return ApiResponse.<List<CategoryGetResponse>>builder()
-                .result(data)
-                .build();
-    }
-
-    @GetMapping("/{parentId}")
-    public ApiResponse<CategoryGetResponse> getListCategory(@PathVariable String parentId) {
-        CategoryGetResponse data = categoryService.getChildrenByParentId(parentId);
-        return ApiResponse.<CategoryGetResponse>builder()
-                .result(data)
-                .build();
-    }
-
-
-    @GetMapping("/get-all-parent")
-    public ApiResponse<List<CategoryResponse>> getAllParentCategories() {
-        List<CategoryResponse> data = categoryService.getOnlyParents();
-        return ApiResponse.<List<CategoryResponse>>builder()
                 .result(data)
                 .build();
     }
@@ -55,6 +37,25 @@ public class CategoryController {
         CategoryResponse response = categoryService.create(request);
         return ApiResponse.<CategoryResponse>builder()
                 .result(response)
+                .build();
+    }
+
+    @PreAuthorize("hasAnyAuthority('ADMIN')")
+    @PutMapping("/update/{id}")
+    public ApiResponse<CategoryResponse> update(@PathVariable String id,
+                                                @RequestBody CategoryRequest request) {
+        CategoryResponse response = categoryService.update(id, request);
+        return ApiResponse.<CategoryResponse>builder()
+                .result(response)
+                .build();
+    }
+
+    @PreAuthorize("hasAnyAuthority('ADMIN')")
+    @DeleteMapping("/delete/{id}")
+    public ApiResponse<Boolean> delete(@PathVariable String id) {
+        Boolean deleted = categoryService.delete(id);
+        return ApiResponse.<Boolean>builder()
+                .result(deleted)
                 .build();
     }
 
