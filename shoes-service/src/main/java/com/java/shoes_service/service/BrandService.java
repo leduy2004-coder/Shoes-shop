@@ -6,6 +6,7 @@ import com.java.shoes_service.dto.brand.BrandRequest;
 import com.java.shoes_service.entity.brand.BrandEntity;
 import com.java.shoes_service.repository.BrandRepository;
 import com.java.shoes_service.repository.httpClient.FileClient;
+import com.java.shoes_service.repository.product.ProductRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -29,6 +30,7 @@ public class BrandService {
     BrandRepository brandRepository;
     ModelMapper modelMapper;
     FileClient fileClient;
+    ProductRepository productRepository;
 
     public PageResponse<BrandGetResponse> searchBrands(
             int page, int size, String name, String sortBy, String sortOrder
@@ -73,12 +75,25 @@ public class BrandService {
         String field = (sortBy == null || sortBy.isBlank()) ? "createdDate" : sortBy.trim();
         Sort.Direction dir = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
 
-        // Whitelist các field hợp lệ để tránh sort field lạ
         return switch (field) {
             case "name", "createdDate", "modifiedDate" ->
                     Sort.by(dir, field);
             default -> Sort.by(Sort.Direction.DESC, "createdDate");
         };
+    }
+
+    public Boolean delete(String id) {
+        long count = productRepository.countByBrand_Id(id);
+        if (count > 0) {
+            return false;
+        }
+
+        if (!brandRepository.existsById(id)) {
+            return false;
+        }
+
+        brandRepository.deleteById(id);
+        return true;
     }
 }
 
