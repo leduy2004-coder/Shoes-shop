@@ -5,17 +5,14 @@ import com.java.shoes_service.dto.ApiResponse;
 import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.brand.BrandGetResponse;
 import com.java.shoes_service.dto.brand.BrandRequest;
-import com.java.shoes_service.dto.product.product.ProductCreateRequest;
 import com.java.shoes_service.service.BrandService;
-import feign.Body;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -57,6 +54,15 @@ public class BrandController {
         BrandGetResponse response = brandService.create(request, file);
         return ApiResponse.<BrandGetResponse>builder()
                 .result(response)
+                .build();
+    }
+
+    @DeleteMapping("/delete/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Boolean> deleteBrand(@PathVariable String id) {
+        Boolean ok = brandService.delete(id);
+        return ApiResponse.<Boolean>builder()
+                .result(ok)
                 .build();
     }
 }
