@@ -12,9 +12,8 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class ChangePassRequest {
-    String password;
-    String newPass;
+public class VerifyAccount {
     String email;
+    String otp;
     OtpStatus status;
 }

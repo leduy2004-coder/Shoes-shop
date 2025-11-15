@@ -41,6 +41,19 @@ spring:
       resource server:
         jwt:
           issuer-uri: http://localhost:8080/issuer
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: leduy8762@gmail.com
+    password: kuotybpsrcscipda
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
 
 eureka:
   client:
@@ -54,3 +67,4 @@ eureka:
     non-secure-port: ${server.port}
     instance-id: ${spring.application.name}:${server.port}
 
+expiration-OTP: 300000 # 5 minutes
