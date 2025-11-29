@@ -16,6 +16,7 @@ public class ProductCreateRequest {
     String name;
     String slug;
     String description;
+    String primaryName;
     double price;
     double discount;
 }

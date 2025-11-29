@@ -4,6 +4,7 @@ package com.java.file_service.controller.internal;
 import com.java.CloudinaryResponse;
 import com.java.FileDeleteAllRequest;
 import com.java.ImageType;
+import com.java.ProductUploadRequest;
 import com.java.file_service.dto.ApiResponse;
 import com.java.file_service.service.FileService;
 import lombok.AccessLevel;
@@ -35,23 +36,24 @@ public class InternalFileController {
 
     @PostMapping(value = "/product/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse<CloudinaryResponse> uploadMediaProduct(@RequestPart("file") MultipartFile file ,
-                                                       @RequestPart("productId") String productId) {
+                                                       @RequestPart("productId") String id,
+                                                       @RequestPart(value = "primaryName", required = false) String primaryName) {
         return ApiResponse.<CloudinaryResponse>builder()
-                .result(fileService.uploadFile(file, ImageType.PRODUCT,productId))
+                .result(fileService.uploadFile(file, ImageType.PRODUCT,id, primaryName))
                 .build();
     }
     @PostMapping("/brand/upload")
     ApiResponse<CloudinaryResponse> uploadMediaPost(@RequestParam("file") MultipartFile file,
                                                     @RequestParam("brandId") String brandId){
         return ApiResponse.<CloudinaryResponse>builder()
-                .result(fileService.uploadFile(file, ImageType.BRAND, brandId))
+                .result(fileService.uploadFile(file, ImageType.BRAND, brandId, null))
                 .build();
     }
     @PostMapping("/banner/upload")
     ApiResponse<CloudinaryResponse> uploadBanner(@RequestParam("file") MultipartFile file,
                                                  @RequestParam("bannerId") String bannerId){
         return ApiResponse.<CloudinaryResponse>builder()
-                .result(fileService.uploadFile(file, ImageType.BANNER, bannerId))
+                .result(fileService.uploadFile(file, ImageType.BANNER, bannerId, null))
                 .build();
     }
     @DeleteMapping(value = "/delete-all-img")

@@ -16,5 +16,7 @@ public class ProductUpdateImageRequest {
     String productId;
 
     List<String> names;
+
+    String primaryName;
 }
 

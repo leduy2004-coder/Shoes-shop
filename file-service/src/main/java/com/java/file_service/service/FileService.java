@@ -3,6 +3,7 @@ package com.java.file_service.service;
 
 import com.java.CloudinaryResponse;
 import com.java.ImageType;
+import com.java.ProductUploadRequest;
 import com.java.file_service.entity.BannerImageEntity;
 import com.java.file_service.entity.BrandImageEntity;
 import com.java.file_service.entity.ProductImageEntity;
@@ -28,30 +29,33 @@ public class FileService {
     BannerRepository bannerRepository;
     BrandRepository brandRepository;
 
-    public CloudinaryResponse uploadFile(MultipartFile file, ImageType imageType, String id) {
+    public CloudinaryResponse uploadFile(MultipartFile file, ImageType imageType, String id, String primaryName) {
         String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
         String url = minioService.upload(file, fileName);
-        String imgId = "";
+        boolean isPrimary = false;
         if (imageType.equals(ImageType.BRAND)) {
-            imgId = brandRepository.save(BrandImageEntity.builder()
+            brandRepository.save(BrandImageEntity.builder()
                     .brandId(id)
                     .name(fileName)
                     .url(url)
-                    .build()).getId();
+                    .build());
         } else if (imageType.equals(ImageType.BANNER)) {
-            imgId = bannerRepository.save(BannerImageEntity.builder()
+            bannerRepository.save(BannerImageEntity.builder()
                     .bannerId(id)
                     .name(fileName)
                     .url(url)
-                    .build()).getId();
+                    .build());
         } else if (imageType.equals(ImageType.PRODUCT)) {
-            imgId = productRepository.save(ProductImageEntity.builder()
+            isPrimary = primaryName.equals(file.getOriginalFilename());
+            productRepository.save(ProductImageEntity.builder()
                     .productId(id)
                     .name(fileName)
                     .url(url)
-                    .build()).getId();
+                    .primary(isPrimary)
+                    .build());
         }
         return CloudinaryResponse.builder()
+                .isPrimary(isPrimary)
                 .fileName(fileName)
                 .url(url).build();
     }
@@ -92,6 +96,7 @@ public class FileService {
                         .map(product -> CloudinaryResponse.builder()
                                 .fileName(product.getName())
                                 .url(product.getUrl())
+                                .isPrimary(product.getPrimary())
                                 .build())
                         .collect(Collectors.toList());
             }
@@ -157,8 +162,7 @@ public class FileService {
             minioService.delete(name);
             bannerRepository.deleteById(image.getId());
             return true;
-        }
-        else if (imageType.equals(ImageType.PRODUCT)){
+        } else if (imageType.equals(ImageType.PRODUCT)) {
             ProductImageEntity image = productRepository.findByName(name);
             minioService.delete(name);
             productRepository.deleteById(image.getId());

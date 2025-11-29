@@ -48,6 +48,7 @@ public enum ErrorCode {
     VARIANT_NOT_FOUND(1857, "Variant not found", HttpStatus.BAD_REQUEST),
     EXCEED_STOCK(1858, "Requested quantity exceeds available stock", HttpStatus.BAD_REQUEST),
     VARIANT_IN_CART(1859, "Cannot delete variant: it is referenced in cart items", HttpStatus.CONFLICT),
+    VARIANT_DUPLICATED(1859, "Variant duplicated", HttpStatus.BAD_REQUEST),
     // Cart-related (bổ sung)
     CART_NOT_FOUND(1860, "Cart not found", HttpStatus.NOT_FOUND),
     CART_ITEM_NOT_FOUND(1861, "Cart item not found", HttpStatus.NOT_FOUND),

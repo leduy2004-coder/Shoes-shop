@@ -5,7 +5,6 @@ import com.java.shoes_service.dto.product.product.ProductGetResponse;
 import com.java.shoes_service.dto.product.variant.*;
 import com.java.shoes_service.entity.product.HistoryProductEntity;
 import com.java.shoes_service.entity.product.ProductEntity;
-import com.java.shoes_service.entity.product.SizeLabel;
 import com.java.shoes_service.entity.product.VariantEntity;
 import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
@@ -62,12 +61,11 @@ public class VariantService {
                 String sizeLabelStr = String.valueOf(vReq.getSize());
 
                 // Chặn trùng (productId + color + size)
-                boolean exists = variantRepository.existsByProductIdAndColorIgnoreCaseAndSize_Label(
+                boolean exists = variantRepository.existsByProductIdAndColorIgnoreCaseAndSize(
                         product.getId(), color, sizeLabelStr
                 );
                 if (exists) {
-                    // throw new AppException(ErrorCode.VARIANT_DUPLICATED);
-                    continue;
+                    throw new AppException(ErrorCode.VARIANT_DUPLICATED);
                 }
 
                 VariantEntity ve = new VariantEntity();
@@ -76,11 +74,7 @@ public class VariantService {
                 ve.setStatus(ProductStatus.ACTIVE);
                 ve.setCountSell(0);
                 ve.setStock(0);
-
-                SizeLabel size = SizeLabel.builder()
-                        .label(sizeLabelStr)
-                        .build();
-                ve.setSize(size);
+                ve.setSize(sizeLabelStr);
 
                 VariantEntity saved = variantRepository.save(ve);
                 created.add(modelMapper.map(saved, VariantResponse.class));
@@ -232,10 +226,7 @@ public class VariantService {
         VariantEntity variant = variantRepository.findById(request.getId()).orElse(null);
         if (variant == null) throw new AppException(ErrorCode.VARIANT_NOT_FOUND);
         variant.setColor(request.getColor());
-        SizeLabel size = SizeLabel.builder()
-                .label(String.valueOf(request.getSize()))
-                .build();
-        variant.setSize(size);
+        variant.setSize(request.getSize());
 
         VariantEntity saved = variantRepository.save(variant);
         return modelMapper.map(saved, VariantResponse.class);

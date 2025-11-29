@@ -13,6 +13,6 @@ import lombok.experimental.FieldDefaults;
 public class VariantUpdateRequest {
     String id;
     String color;
-    int size;
+    String size;
 }
 

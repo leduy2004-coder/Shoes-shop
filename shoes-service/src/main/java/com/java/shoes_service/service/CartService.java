@@ -89,7 +89,7 @@ public class CartService {
             embedded.setId(variant.getId());
             embedded.setProductId(variant.getProductId());
             embedded.setColor(variant.getColor());
-            embedded.setSizeLabel(variant.getSize().getLabel());
+            embedded.setSizeLabel(variant.getSize());
             embedded.setStock(variant.getStock());
 
             CartItemEntity line = CartItemEntity.builder()

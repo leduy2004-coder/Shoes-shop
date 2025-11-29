@@ -78,7 +78,6 @@ public class ProductController {
                 .build();
     }
 
-
     @PatchMapping(value = "/update/content")
     public ApiResponse<ProductGetDetailResponse> updateProduct(@RequestBody ProductUpdateRequest request){
         ProductGetDetailResponse response = productService.updateContentProduct(request);

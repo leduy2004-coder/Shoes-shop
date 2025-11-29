@@ -11,5 +11,5 @@ import java.util.List;
 @Repository
 public interface VariantRepository extends MongoRepository<VariantEntity, String> {
     List<VariantEntity> findByProductId(String productId);
-    boolean existsByProductIdAndColorIgnoreCaseAndSize_Label(String productId, String color, String sizeLabel);
+    boolean existsByProductIdAndColorIgnoreCaseAndSize(String productId, String color, String size);
 }

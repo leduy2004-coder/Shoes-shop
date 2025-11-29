@@ -22,7 +22,7 @@ public class FileController {
     ApiResponse<CloudinaryResponse> uploadMedia(@RequestParam("file") MultipartFile file,
                                                 @RequestParam("id") String id)  {
         return ApiResponse.<CloudinaryResponse>builder()
-                .result(fileService.uploadFile(file, ImageType.PRODUCT, id))
+                .result(fileService.uploadFile(file, ImageType.PRODUCT, id, null))
                 .build();
     }
 }

@@ -35,6 +35,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -132,7 +134,7 @@ public class ProductService {
 
         // 3) Paging (controller 1-based)
         int pageIndex = Math.max(0, page - 1);
-        int pageSize  = Math.max(1, size);
+        int pageSize = Math.max(1, size);
         query.skip((long) pageIndex * pageSize).limit(pageSize);
 
         // 4) Execute
@@ -182,7 +184,7 @@ public class ProductService {
 
             //upload images
             List<CloudinaryResponse> imgUrls = (files == null ? List.<MultipartFile>of() : files).stream()
-                    .map(file -> fileClient.uploadMediaProduct(file, productId).getResult())
+                    .map(file -> fileClient.uploadMediaProduct(file, productId, request.getPrimaryName()).getResult())
                     .toList();
 
             ProductCreateResponse response = modelMapper.map(entity, ProductCreateResponse.class);
@@ -215,10 +217,10 @@ public class ProductService {
                     .orElseThrow(() -> new AppException(ErrorCode.BRAND_NOT_FOUND));
             entity.setBrand(brand);
         }
-        if (request.getName() != null)        entity.setName(request.getName());
-        if (request.getSlug() != null)        entity.setSlug(request.getSlug());
+        if (request.getName() != null) entity.setName(request.getName());
+        if (request.getSlug() != null) entity.setSlug(request.getSlug());
         if (request.getDescription() != null) entity.setDescription(request.getDescription());
-        if (request.getPrice() > 0)           entity.setPrice(request.getPrice());
+        if (request.getPrice() > 0) entity.setPrice(request.getPrice());
         // discount có thể = 0, nên patch theo null-check: dùng Double để nhận null nếu muốn
         entity.setDiscount(request.getDiscount());
 
@@ -262,12 +264,13 @@ public class ProductService {
         if (files != null && !files.isEmpty()) {
             for (MultipartFile f : files) {
                 if (f != null && !f.isEmpty()) {
-                    fileClient.uploadMediaProduct(f, request.getProductId());
+                    fileClient.uploadMediaProduct(f, request.getProductId(),request.getPrimaryName());
                 }
             }
         }
         return fileClient.getImage(request.getProductId(), ImageType.PRODUCT).getResult();
     }
+
     // Top 5 theo averageRating desc, tie-break theo countSell desc, rồi createdDate desc
     public List<ProductGetResponse> getTopRatedTop5() {
         Pageable top5 = PageRequest.of(0, 5,
@@ -321,7 +324,6 @@ public class ProductService {
         }
 
 
-
         // 3) Xoá reviews
         reviewRepository.deleteByProductId(productId);
 
@@ -333,10 +335,16 @@ public class ProductService {
 
     private ProductGetResponse mapToProductGetResponse(ProductEntity entity) {
         ProductGetResponse response = modelMapper.map(entity, ProductGetResponse.class);
-        response.setImageUrl(fileClient.getImage(entity.getId(), ImageType.PRODUCT).getResult().get(0));
-
+        List<CloudinaryResponse> list = fileClient.getImage(entity.getId(), ImageType.PRODUCT).getResult();
+        if (list != null) {
+            response.setImageUrl(list.stream()
+                    .filter(CloudinaryResponse::getIsPrimary)
+                    .findFirst()
+                    .orElse(null));
+        }
         return response;
     }
+
 
     private Sort resolveSort(String sortBy, String sortOrder) {
         String field = (sortBy == null || sortBy.isBlank()) ? "createdDate" : sortBy.trim();

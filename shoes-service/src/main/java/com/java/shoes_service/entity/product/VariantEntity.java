@@ -24,6 +24,5 @@ public class VariantEntity extends BaseEntity {
 
     int countSell;
 
-    @Field("size")
-    SizeLabel size;
+    String size;
 }

@@ -8,8 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class CloudinaryResponse {
-    private String fileName;
-    private String url;
+public class ProductUploadRequest {
+    private String productId;
     private Boolean isPrimary;
 }
