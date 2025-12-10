@@ -9,12 +9,12 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Document(collection = "user_variant")
+@Document(collection = "variant_size")
 @Getter
 @Setter
-public class UserVariantEntity extends BaseEntity {
-    String userId;
-    String variantSizeId;
-    long quantity;
-    Double totalPrice;
+public class VariantSizeEntity extends BaseEntity {
+    String variantId;
+    int stock;
+    int countSell;
+    String size;
 }

@@ -13,6 +13,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Getter
 @Setter
 public class HistoryProductEntity extends BaseEntity {
-    String variantId;
+    String variantSizeId;
     int count;
 }

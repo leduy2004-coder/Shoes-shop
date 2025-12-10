@@ -10,8 +10,8 @@ import java.util.List;
 
 @Repository
 public interface HistoryProductRepository extends MongoRepository<HistoryProductEntity, String> {
-    Page<HistoryProductEntity> findByVariantId(String variantId, Pageable pageable);
-    void deleteByVariantIdIn(List<String> variantIds);
-    List<HistoryProductEntity> findAllByVariantIdIn(List<String> variantIds);
-    void deleteByVariantId(String variantId);
+    Page<HistoryProductEntity> findByVariantSizeId(String variantSizeId, Pageable pageable);
+    void deleteByVariantSizeIdIn(List<String> variantSizeIds);
+    List<HistoryProductEntity> findAllByVariantSizeIdIn(List<String> variantSizeIds);
+    void deleteByVariantSizeId(String variantSizeId);
 }

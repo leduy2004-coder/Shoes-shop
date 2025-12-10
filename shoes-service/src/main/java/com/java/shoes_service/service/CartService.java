@@ -11,6 +11,8 @@ import com.java.shoes_service.entity.cart.CartEntity;
 import com.java.shoes_service.entity.cart.CartItemEntity;
 import com.java.shoes_service.entity.cart.Variant;
 import com.java.shoes_service.entity.product.ProductEntity;
+import com.java.shoes_service.entity.product.VariantEntity;
+import com.java.shoes_service.entity.product.VariantSizeEntity;
 import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
 import com.java.shoes_service.repository.CartItemRepository;
@@ -18,6 +20,7 @@ import com.java.shoes_service.repository.CartRepository;
 import com.java.shoes_service.repository.httpClient.FileClient;
 import com.java.shoes_service.repository.product.ProductRepository;
 import com.java.shoes_service.repository.product.VariantRepository;
+import com.java.shoes_service.repository.product.VariantSizeRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -40,6 +43,7 @@ public class CartService {
     CartRepository cartRepository;
     CartItemRepository cartItemRepository;
     VariantRepository variantRepository;
+    VariantSizeRepository variantSizeRepository;
     ProductRepository productRepository;
     ModelMapper modelMapper;
     FileClient fileClient;
@@ -60,14 +64,17 @@ public class CartService {
 
         CartEntity cart = getOrCreateCart(userId);
 
-        // Lấy variant + product
-        var variant = variantRepository.findById(req.getVariantId())
+        // req.getVariantId() giờ là variantSizeId (ID của VariantSizeEntity)
+        VariantSizeEntity variantSize = variantSizeRepository.findById(req.getVariantId())
                 .orElseThrow(() -> new AppException(ErrorCode.VARIANT_NOT_FOUND));
 
-        var product = productRepository.findById(variant.getProductId())
+        VariantEntity variant = variantRepository.findById(variantSize.getVariantId())
+                .orElseThrow(() -> new AppException(ErrorCode.VARIANT_NOT_FOUND));
+
+        ProductEntity product = productRepository.findById(variant.getProductId())
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
 
-        // Tìm dòng cùng variant
+        // Tìm dòng cùng variantSize (so sánh theo variantSizeId)
         Optional<CartItemEntity> existing = cartItemRepository.findByCartId(cart.getId()).stream()
                 .filter(it -> it.getVariant() != null
                         && req.getVariantId().equals(it.getVariant().getId()))
@@ -75,22 +82,22 @@ public class CartService {
 
         if (existing.isPresent()) {
             int newQty = existing.get().getQuantity() + req.getQuantity();
-            if (newQty > variant.getStock())
+            if (newQty > variantSize.getStock())
                 throw new AppException(ErrorCode.EXCEED_STOCK);
 
             existing.get().setQuantity(newQty);
             cartItemRepository.save(existing.get());
         } else {
-            if (req.getQuantity() > variant.getStock())
+            if (req.getQuantity() > variantSize.getStock())
                 throw new AppException(ErrorCode.EXCEED_STOCK);
 
-            // Nhúng Variant (embedded) vào CartItem
+            // Nhúng Variant (embedded) vào CartItem - lấy từ VariantSizeEntity và VariantEntity
             Variant embedded = new Variant();
-            embedded.setId(variant.getId());
+            embedded.setId(variantSize.getId()); // ID của VariantSizeEntity
             embedded.setProductId(variant.getProductId());
             embedded.setColor(variant.getColor());
-            embedded.setSizeLabel(variant.getSize());
-            embedded.setStock(variant.getStock());
+            embedded.setSizeLabel(variantSize.getSize());
+            embedded.setStock(variantSize.getStock());
 
             CartItemEntity line = CartItemEntity.builder()
                     .cartId(cart.getId())
@@ -119,13 +126,14 @@ public class CartService {
             throw new AppException(ErrorCode.FORBIDDEN);
 
         // Kiểm tra stock hiện tại
+        // item.getVariant().getId() giờ là variantSizeId (ID của VariantSizeEntity)
         if (item.getVariant() != null && item.getVariant().getId() != null) {
-            var variant = variantRepository.findById(item.getVariant().getId())
+            VariantSizeEntity variantSize = variantSizeRepository.findById(item.getVariant().getId())
                     .orElseThrow(() -> new AppException(ErrorCode.VARIANT_NOT_FOUND));
-            if (quantity > variant.getStock())
+            if (quantity > variantSize.getStock())
                 throw new AppException(ErrorCode.EXCEED_STOCK);
         } else {
-            var product = productRepository.findById(item.getProductId())
+            ProductEntity product = productRepository.findById(item.getProductId())
                     .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
             if (quantity > product.getTotalStock())
                 throw new AppException(ErrorCode.EXCEED_STOCK);
@@ -258,12 +266,20 @@ public class CartService {
         Map<String, ProductEntity> productMap = productRepository.findAllById(productIds).stream()
                 .collect(Collectors.toMap(ProductEntity::getId, p -> p));
 
-        // batch variants
-        List<String> variantIds = items.stream()
+        // batch variantSizes (variantId trong cartItem là variantSizeId)
+        List<String> variantSizeIds = items.stream()
                 .map(CartItemEntity::getVariant).filter(java.util.Objects::nonNull)
                 .map(Variant::getId).filter(java.util.Objects::nonNull).distinct().toList();
-        var variantMap = variantRepository.findAllById(variantIds).stream()
-                .collect(Collectors.toMap(v -> v.getId(), v -> v));
+        Map<String, VariantSizeEntity> variantSizeMap = variantSizeRepository.findAllById(variantSizeIds).stream()
+                .collect(Collectors.toMap(VariantSizeEntity::getId, vs -> vs));
+
+        // batch variants để validate productId
+        List<String> variantIds = variantSizeMap.values().stream()
+                .map(VariantSizeEntity::getVariantId)
+                .distinct()
+                .toList();
+        Map<String, VariantEntity> variantMap = variantRepository.findAllById(variantIds).stream()
+                .collect(Collectors.toMap(VariantEntity::getId, v -> v));
 
         // xác định item cần xoá
         List<String> toDelete = items.stream().filter(it -> {
@@ -271,8 +287,13 @@ public class CartService {
             if (p == null || it.getQuantity() <= 0) return true;
 
             if (it.getVariant() != null && it.getVariant().getId() != null) {
-                var v = variantMap.get(it.getVariant().getId());
-                return (v == null) || !p.getId().equals(v.getProductId()) || it.getQuantity() > v.getStock();
+                VariantSizeEntity variantSize = variantSizeMap.get(it.getVariant().getId());
+                if (variantSize == null) return true;
+                
+                VariantEntity variant = variantMap.get(variantSize.getVariantId());
+                if (variant == null || !p.getId().equals(variant.getProductId())) return true;
+                
+                return it.getQuantity() > variantSize.getStock();
             } else {
                 return it.getQuantity() > p.getTotalStock();
             }

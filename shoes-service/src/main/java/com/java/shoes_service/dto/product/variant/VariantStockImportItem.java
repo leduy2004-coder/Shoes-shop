@@ -11,6 +11,6 @@ import lombok.experimental.FieldDefaults;
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class VariantStockImportItem {
-    String variantId;
+    String variantSizeId; // ID của VariantSizeEntity
     int count;
 }

@@ -16,4 +16,5 @@ public class UserPurchasedItemResponse {
     VariantResponse variant;
     long countBuy;
     Double totalMoney;
+    String userId; // User ID - để admin biết ai đã mua sản phẩm
 }

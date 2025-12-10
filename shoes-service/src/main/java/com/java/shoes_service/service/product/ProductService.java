@@ -4,6 +4,8 @@ import com.java.CloudinaryResponse;
 import com.java.ImageType;
 import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.product.product.*;
+import com.java.shoes_service.dto.product.variant.VariantGroupResponse;
+import com.java.shoes_service.dto.product.variant.VariantResponse;
 import com.java.shoes_service.entity.brand.BrandEntity;
 import com.java.shoes_service.entity.product.CategoryEntity;
 import com.java.shoes_service.entity.product.ProductEntity;
@@ -77,7 +79,8 @@ public class ProductService {
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
         ProductGetResponse productGetResponse = modelMapper.map(entity, ProductGetResponse.class);
 
-        List<VariantEntity> list = variantRepository.findByProductId(productId);
+        // Lấy variants grouped theo variantId và color, mỗi variant có list sizes
+        List<VariantGroupResponse> list = variantService.getVariantsGroupedByProductId(productId);
         List<CloudinaryResponse> listImage = fileClient.getImage(productId, ImageType.PRODUCT).getResult();
         return ProductGetDetailResponse.builder().product(productGetResponse).variants(list).listImg(listImage).build();
     }
@@ -229,12 +232,10 @@ public class ProductService {
 
         // Build detail response (product + variants + list images)
         ProductGetResponse productDto = modelMapper.map(entity, ProductGetResponse.class);
-        List<VariantEntity> variants = variantRepository.findByProductId(entity.getId());
         List<CloudinaryResponse> images = fileClient.getImage(entity.getId(), ImageType.PRODUCT).getResult();
 
         return ProductGetDetailResponse.builder()
                 .product(productDto)
-                .variants(variants)
                 .listImg(images)
                 .build();
     }
@@ -286,23 +287,13 @@ public class ProductService {
         ProductEntity product = productRepository.findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
 
-        // Lấy variants để xoá history + cart items theo variant
+        // Lấy variants để xoá - variantService.deleteVariant() sẽ tự xử lý xóa variantSizes và history
         List<VariantEntity> variants = variantRepository.findByProductId(productId);
         if (!variants.isEmpty()) {
             List<String> vIds = variants.stream().map(VariantEntity::getId).toList();
 
-            // Xoá cart items theo variantIds (phòng xa)
-
+            // Xoá từng variant (sẽ tự xóa variantSizes và history tương ứng)
             vIds.forEach(variantService::deleteVariant);
-
-            // Xoá history
-            try {
-                historyProductRepository.deleteByVariantIdIn(vIds);
-            } catch (Exception e) {
-                log.warn("deleteByVariantIdIn not available, fallback find+delete: {}", e.getMessage());
-                historyProductRepository.findAllByVariantIdIn(vIds)
-                        .forEach(h -> historyProductRepository.deleteById(h.getId()));
-            }
         }
 
         // Xoá ảnh

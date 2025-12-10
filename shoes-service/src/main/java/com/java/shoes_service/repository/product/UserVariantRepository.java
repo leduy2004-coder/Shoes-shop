@@ -12,4 +12,6 @@ public interface UserVariantRepository extends MongoRepository<UserVariantEntity
     List<UserVariantEntity> findByCreatedDateBetween(Instant from, Instant to);
 
     List<UserVariantEntity> findTop10ByOrderByCreatedDateDesc();
+    
+    List<UserVariantEntity> findByVariantSizeIdIn(List<String> variantSizeIds);
 }

@@ -18,11 +18,6 @@ public class VariantEntity extends BaseEntity {
 
     String productId;
 
-    int stock;
     String color;
     ProductStatus status; // active | inactive
-
-    int countSell;
-
-    String size;
 }

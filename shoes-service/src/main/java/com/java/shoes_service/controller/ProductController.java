@@ -114,9 +114,32 @@ public class ProductController {
     }
 
     @GetMapping("/purchased")
-    public ApiResponse<List<UserPurchasedItemResponse>> getPurchasedByUser(
-            @RequestParam("userId") String userId
+    public ApiResponse<List<UserPurchasedItemResponse>> getPurchasedByUser() {
+        // User thường: tự động lấy userId từ token
+        List<UserPurchasedItemResponse> data = userVariantService.getPurchasedByUserFromToken();
+        return ApiResponse.<List<UserPurchasedItemResponse>>builder()
+                .result(data)
+                .build();
+    }
+
+    @GetMapping("/purchased/by-product/{productId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<List<UserPurchasedItemResponse>> getPurchasedByProductId(
+            @PathVariable String productId
     ) {
+        // Admin: lấy lịch sử ai đã mua product này
+        List<UserPurchasedItemResponse> data = userVariantService.getPurchasedByProductId(productId);
+        return ApiResponse.<List<UserPurchasedItemResponse>>builder()
+                .result(data)
+                .build();
+    }
+
+    @GetMapping("/purchased/by-user/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<List<UserPurchasedItemResponse>> getPurchasedByUserId(
+            @PathVariable String userId
+    ) {
+        // Admin: lấy lịch sử mua của user cụ thể
         List<UserPurchasedItemResponse> data = userVariantService.getPurchasedByUser(userId);
         return ApiResponse.<List<UserPurchasedItemResponse>>builder()
                 .result(data)

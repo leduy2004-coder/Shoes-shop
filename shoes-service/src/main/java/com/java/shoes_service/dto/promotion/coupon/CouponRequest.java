@@ -1,20 +1,18 @@
-package com.java.shoes_service.entity.promotion;
+package com.java.shoes_service.dto.promotion.coupon;
 
-import com.java.shoes_service.entity.common.BaseEntity;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 
-@NoArgsConstructor
-@AllArgsConstructor
+@Data
 @Builder
-@FieldDefaults(level = AccessLevel.PRIVATE)
-@Document(collection = "coupons")
+@AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Setter
-public class CouponEntity extends BaseEntity {
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class CouponRequest {
     String code;
     int discountPercent; // Phần trăm giảm giá
     double minOrder; // Giá trị đơn hàng tối thiểu
@@ -22,3 +20,4 @@ public class CouponEntity extends BaseEntity {
     Instant expirationDate; // Thời hạn hết hạn
     boolean active; // Trạng thái: active | inactive
 }
+

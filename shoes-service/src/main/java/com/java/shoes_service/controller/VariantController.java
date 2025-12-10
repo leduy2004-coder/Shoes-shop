@@ -20,10 +20,11 @@ public class VariantController {
     VariantService variantService;
     UserVariantService userVariantService;
 
-    @PostMapping(value = "/create-variant")
-    public ApiResponse<List<VariantResponse>> createVariant(@RequestBody VariantCreateRequest request) {
+    @PostMapping(value = "/upsert")
+    public ApiResponse<List<VariantResponse>> upsertVariant(@RequestBody VariantCreateRequest request) {
+        // Gộp create và update: Nếu variant (color + size) đã tồn tại thì giữ nguyên, nếu chưa thì tạo mới
         return ApiResponse.<List<VariantResponse>>builder()
-                .result(variantService.createVariant(request))
+                .result(variantService.upsertVariant(request))
                 .build();
     }
     @PostMapping("/import-stock")
@@ -33,19 +34,13 @@ public class VariantController {
     }
     @GetMapping("/history")
     public ApiResponse<PageResponse<VariantHistoryResponse>> history(
-            @RequestParam(required = false)  String variantId,
+            @RequestParam(required = false)  String variantSizeId, // ID của VariantSizeEntity
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        PageResponse<VariantHistoryResponse> res = variantService.getHistory(variantId, page, size);
+        PageResponse<VariantHistoryResponse> res = variantService.getHistory(variantSizeId, page, size);
         return ApiResponse.<PageResponse<VariantHistoryResponse>>builder()
                 .result(res)
-                .build();
-    }
-    @PutMapping(value = "/update")
-    public ApiResponse<VariantResponse> updateVariant(@RequestBody VariantUpdateRequest request) {
-        return ApiResponse.<VariantResponse>builder()
-                .result(variantService.updateVariant(request))
                 .build();
     }
     @DeleteMapping("/delete/{id}")
@@ -55,9 +50,32 @@ public class VariantController {
                 .build();
     }
 
+    @DeleteMapping("/delete-size/{variantSizeId}")
+    public ApiResponse<Boolean> deleteVariantSize(@PathVariable String variantSizeId) {
+        return ApiResponse.<Boolean>builder()
+                .result(variantService.deleteVariantSize(variantSizeId))
+                .build();
+    }
+
+    @GetMapping("/{id}")
+    public ApiResponse<VariantResponse> getVariantById(@PathVariable String id) {
+        VariantResponse response = variantService.getVariantById(id);
+        return ApiResponse.<VariantResponse>builder()
+                .result(response)
+                .build();
+    }
+
+    @GetMapping("/by-product/{productId}")
+    public ApiResponse<List<VariantResponse>> getVariantsByProductId(@PathVariable String productId) {
+        List<VariantResponse> response = variantService.getVariantsByProductId(productId);
+        return ApiResponse.<List<VariantResponse>>builder()
+                .result(response)
+                .build();
+    }
+
     @PostMapping("/buy")
-    public ApiResponse<List<UserVariantResponse>> buyVariant(@RequestBody List<UserVariantRequest> request) {
-        List<UserVariantResponse> response = userVariantService.buyVariant(request);
+    public ApiResponse<List<UserVariantResponse>> buyVariant(@RequestBody BuyVariantRequest request) {
+        List<UserVariantResponse> response = userVariantService.buyVariantWithCoupon(request);
         return ApiResponse.<List<UserVariantResponse>>builder()
                 .result(response)
                 .build();

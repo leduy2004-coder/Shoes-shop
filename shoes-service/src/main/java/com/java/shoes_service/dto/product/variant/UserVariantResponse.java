@@ -12,6 +12,6 @@ import lombok.experimental.FieldDefaults;
 public class UserVariantResponse {
     String id;
     String variantId;
-    long countBuy;
+    long quantity;
     Double totalMoney;
 }

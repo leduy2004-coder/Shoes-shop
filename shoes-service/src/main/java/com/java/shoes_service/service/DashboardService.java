@@ -47,7 +47,7 @@ public class DashboardService {
 
         // 4. Tổng doanh thu
         double totalRevenue = purchases.stream()
-                .mapToDouble(p -> Optional.ofNullable(p.getTotalMoney()).orElse(0.0))
+                .mapToDouble(p -> Optional.ofNullable(p.getTotalPrice()).orElse(0.0))
                 .sum();
 
         // 5. Tổng user đã mua (distinct userId)
@@ -68,7 +68,7 @@ public class DashboardService {
                             LocalDateTime ldt = LocalDateTime.ofInstant(createdAt, ZoneId.systemDefault());
                             return YearMonth.from(ldt);
                         },
-                        Collectors.summingDouble(p -> Optional.ofNullable(p.getTotalMoney()).orElse(0.0))
+                        Collectors.summingDouble(p -> Optional.ofNullable(p.getTotalPrice()).orElse(0.0))
                 ));
 
         List<MonthlyRevenueDto> revenueByMonth = revenueMap.entrySet().stream()
@@ -87,9 +87,9 @@ public class DashboardService {
                 .map(p -> RecentOrderDto.builder()
                         .id(p.getId())
                         .userId(p.getUserId())
-                        .variantId(p.getVariantId())
-                        .countBuy(p.getCountBuy())
-                        .totalMoney(p.getTotalMoney())
+                        .variantId(p.getVariantSizeId())
+                        .countBuy(p.getQuantity())
+                        .totalMoney(p.getTotalPrice())
                         .createdAt(p.getCreatedDate())
                         .build())
                 .toList();
