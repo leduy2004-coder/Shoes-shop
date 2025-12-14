@@ -8,8 +8,8 @@ import com.java.auth_service.dto.request.ChangePassRequest;
 import com.java.auth_service.dto.request.UserRequest;
 import com.java.auth_service.dto.request.VerifyAccount;
 import com.java.auth_service.dto.response.AuthenticationResponse;
+import com.java.auth_service.service.OAuth2UserService;
 import com.java.auth_service.service.security.AuthenticationService;
-import com.java.auth_service.utility.enumUtils.OtpStatus;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AccessLevel;
@@ -28,6 +28,7 @@ import java.io.IOException;
 public class AuthenticationController {
 
     AuthenticationService service;
+    OAuth2UserService oAuth2UserService;
 
     @PostMapping("/register")
     public ApiResponse<Boolean> register(
@@ -67,5 +68,11 @@ public class AuthenticationController {
     @PostMapping("/email/generate-otp")
     public ApiResponse<Boolean> generateOtp(@RequestParam(value = "email") String email) {
         return ApiResponse.<Boolean>builder().result(service.sendOtp(email)).build();
+    }
+
+    @PostMapping("/login/oauth2")
+    public ApiResponse<AuthenticationResponse> outboundAuthenticate(@RequestParam("code") String code){
+        var result = oAuth2UserService.loginGoogle(code);
+        return ApiResponse.<AuthenticationResponse>builder().result(result).build();
     }
 }

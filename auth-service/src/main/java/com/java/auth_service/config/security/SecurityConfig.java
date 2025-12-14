@@ -16,6 +16,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import static org.springframework.security.config.Customizer.withDefaults;
 import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
 
 
@@ -33,7 +34,10 @@ public class SecurityConfig {
             "/refresh",
             "/email/*",
             "/change-pass",
-            "/internal/users/*"
+            "/internal/users/*",
+            "/code/**",
+            "/oauth2/**",  // Match OAuth2 endpoints (sau khi loại bỏ context-path /auth)
+            "/login/oauth2/**"
     };
 
     LogoutHandler logoutHandler;
@@ -48,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest()
                         .authenticated())
+                .oauth2Login(withDefaults())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
                 )

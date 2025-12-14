@@ -41,6 +41,8 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             "/auth/refresh",
             "/auth/email/.*",
             "/auth/change-pass",
+            "/auth/oauth2/.*",  
+            "/auth/login/oauth2(/.*)?",
 
             "/shoes/products/get-by-id/.*",
             "/shoes/products/search",
