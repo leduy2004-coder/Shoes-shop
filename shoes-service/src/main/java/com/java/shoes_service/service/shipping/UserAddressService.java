@@ -66,4 +66,30 @@ public class UserAddressService {
 
         userAddressRepository.delete(address);
     }
+
+    @Transactional
+    public UserAddressResponse updateAddressDefault(String addressId, String userId) {
+        if (!StringUtils.hasText(addressId)) {
+            throw new IllegalArgumentException("addressId is required");
+        }
+        if (!StringUtils.hasText(userId)) {
+            throw new IllegalArgumentException("userId is required");
+        }
+        
+        UserAddress address = userAddressRepository.findById(addressId)
+                .orElseThrow(() -> new AppException(ErrorCode.ADDRESS_NOT_EXISTED));
+
+        if (!address.getUserId().equals(userId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        List<UserAddress> userAddresses = userAddressRepository.findByUserId(userId);
+        userAddresses.forEach(addr -> addr.setIsDefault(false));
+        userAddressRepository.saveAll(userAddresses);
+
+        address.setIsDefault(true);
+        UserAddress updated = userAddressRepository.save(address);
+
+        return modelMapper.map(updated, UserAddressResponse.class);
+    }
 }

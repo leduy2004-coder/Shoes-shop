@@ -29,4 +29,6 @@ public class CartItemEntity extends BaseEntity {
 
     String imageUrl;
 
+    Double price;
+
 }

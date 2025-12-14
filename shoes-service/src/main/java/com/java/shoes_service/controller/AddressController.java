@@ -2,8 +2,11 @@ package com.java.shoes_service.controller;
 
 import com.java.shoes_service.dto.ApiResponse;
 import com.java.shoes_service.dto.address.*;
+import com.java.shoes_service.exception.AppException;
+import com.java.shoes_service.exception.ErrorCode;
 import com.java.shoes_service.service.shipping.AddressPublicApiService;
 import com.java.shoes_service.service.shipping.UserAddressService;
+import com.java.shoes_service.utility.GetInfo;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -64,5 +67,17 @@ public class AddressController {
     ) {
         userAddressService.deleteUserAddress(addressId);
         return ApiResponse.<Boolean>builder().result(true).build();
+    }
+
+    @PutMapping("/{addressId}/default")
+    public ApiResponse<UserAddressResponse> updateAddressDefault(
+            @PathVariable String addressId
+    ) {
+        String userId = GetInfo.getLoggedInUserName();
+        if (userId == null) {
+            throw new AppException(ErrorCode.USER_NOT_VALID);
+        }
+        UserAddressResponse resp = userAddressService.updateAddressDefault(addressId, userId);
+        return ApiResponse.<UserAddressResponse>builder().result(resp).build();
     }
 }

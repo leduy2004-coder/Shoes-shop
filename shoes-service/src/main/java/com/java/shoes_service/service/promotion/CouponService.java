@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -31,69 +32,68 @@ public class CouponService {
     CouponRepository couponRepository;
     ModelMapper modelMapper;
 
-    public CouponResponse create(CouponRequest request) {
-        // Kiểm tra mã giảm giá đã tồn tại chưa
-        if (couponRepository.findByCode(request.getCode()).isPresent()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+    public CouponResponse save(CouponRequest request) {
+
+        // ========== VALIDATE CHUNG ==========
+        validateCoupon(request.getId(), request);
+
+        CouponEntity coupon;
+
+        // ========== PHÂN BIỆT CREATE / UPDATE ==========
+        if (request.getId() == null) {
+            // CREATE
+            coupon = modelMapper.map(request, CouponEntity.class);
+        } else {
+            // UPDATE
+            coupon = couponRepository.findById(request.getId())
+                    .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
+
+            coupon.setDiscountPercent(request.getDiscountPercent());
+            coupon.setMinOrder(request.getMinOrder());
+            coupon.setQuantity(request.getQuantity());
+            coupon.setExpirationDate(request.getExpirationDate());
+            coupon.setActive(request.isActive());
         }
 
-        // Validate expiration date
-        if (request.getExpirationDate() != null && request.getExpirationDate().isBefore(Instant.now())) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-
-        // Validate quantity
-        if (request.getQuantity() <= 0) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-
-        // Validate discount percent
-        if (request.getDiscountPercent() <= 0 || request.getDiscountPercent() > 100) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-
-        CouponEntity coupon = modelMapper.map(request, CouponEntity.class);
+        coupon.setCode(request.getCode().trim());
         coupon = couponRepository.save(coupon);
-        
+
         return modelMapper.map(coupon, CouponResponse.class);
     }
 
-    public CouponResponse update(String id, CouponRequest request) {
-        CouponEntity coupon = couponRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
+    private void validateCoupon(String id, CouponRequest request) {
 
-        // Kiểm tra mã code có bị trùng với coupon khác không
-        couponRepository.findByCode(request.getCode())
-                .ifPresent(existingCoupon -> {
-                    if (!existingCoupon.getId().equals(id)) {
-                        throw new AppException(ErrorCode.INVALID_REQUEST);
-                    }
-                });
-
-        // Validate expiration date
-        if (request.getExpirationDate() != null && request.getExpirationDate().isBefore(Instant.now())) {
+        // code
+        if (request.getCode() == null || request.getCode().isBlank()) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        // Validate quantity
+        String trimmedCode = request.getCode().trim();
+
+        // check trùng code
+        Optional<CouponEntity> existing = couponRepository.findByCode(trimmedCode);
+        if (existing.isPresent()) {
+            if (id == null || !existing.get().getId().equals(id)) {
+                throw new AppException(ErrorCode.INVALID_REQUEST);
+            }
+        }
+
+        // expiration date
+        if (request.getExpirationDate() != null
+                && request.getExpirationDate().isBefore(Instant.now())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // quantity
         if (request.getQuantity() <= 0) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        // Validate discount percent
-        if (request.getDiscountPercent() <= 0 || request.getDiscountPercent() > 100) {
+        // discount percent
+        if (request.getDiscountPercent() <= 0
+                || request.getDiscountPercent() > 100) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
-
-        coupon.setCode(request.getCode());
-        coupon.setDiscountPercent(request.getDiscountPercent());
-        coupon.setMinOrder(request.getMinOrder());
-        coupon.setQuantity(request.getQuantity());
-        coupon.setExpirationDate(request.getExpirationDate());
-        coupon.setActive(request.isActive());
-
-        coupon = couponRepository.save(coupon);
-        return modelMapper.map(coupon, CouponResponse.class);
     }
 
     public Boolean delete(String id) {

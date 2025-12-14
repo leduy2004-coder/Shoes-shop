@@ -13,6 +13,7 @@ import java.time.Instant;
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CouponRequest {
+    String id;
     String code;
     int discountPercent; // Phần trăm giảm giá
     double minOrder; // Giá trị đơn hàng tối thiểu

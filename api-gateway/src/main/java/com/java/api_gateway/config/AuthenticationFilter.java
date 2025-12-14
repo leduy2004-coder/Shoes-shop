@@ -52,6 +52,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             "/shoes/categories/.*",
             "/shoes/brands/detail/.*",
             "/shoes/brands/search",
+            "/shoes/payment/vn-pay-callback",
     };
 
     @Value("${app.api-prefix}")

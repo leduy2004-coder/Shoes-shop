@@ -35,3 +35,14 @@ eureka:
     non-secure-port: ${server.port}
     instance-id: ${spring.application.name}:${server.port}
 
+payment:
+  vnPay:
+    environment: docker
+    url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+    tmnCode: 2QQT1QID
+    secretKey: BJC128BQDSLL084SV6H0QLOM19CZLMHE
+    returnUrl: http://localhost:8080/api/v1/shoes/payment/vn-pay-callback
+    version: 2.1.0
+    command: pay
+    orderType: other
+    returnUrlAfterPayment: http://localhost:3000

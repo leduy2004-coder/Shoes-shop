@@ -11,7 +11,7 @@ import lombok.experimental.FieldDefaults;
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CartCreateRequest {
-    String variantId;
+    String variantSizeId;
     int quantity;
 }
 

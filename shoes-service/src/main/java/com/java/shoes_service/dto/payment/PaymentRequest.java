@@ -1,4 +1,5 @@
-package com.java.shoes_service.dto.product.variant;
+package com.java.shoes_service.dto.payment;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -8,7 +9,12 @@ import lombok.experimental.FieldDefaults;
 @Setter
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserVariantRequest {
+public class PaymentRequest {
+    String code;
+    String message;
+    String paymentUrl;
     String variantSizeId;
-    long quantity;
+    long amount;
+    String bankCode;
+    String userId;
 }

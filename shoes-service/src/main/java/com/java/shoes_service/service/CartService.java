@@ -2,10 +2,9 @@ package com.java.shoes_service.service;
 
 import com.java.CloudinaryResponse;
 import com.java.ImageType;
-import com.java.shoes_service.dto.ApiResponse;
+import com.java.shoes_service.dto.cart.CartCreateRequest;
 import com.java.shoes_service.dto.cart.CartGetResponse;
 import com.java.shoes_service.dto.cart.CartItemResponse;
-import com.java.shoes_service.dto.cart.CartCreateRequest;
 import com.java.shoes_service.dto.cart.ProductCartResponse;
 import com.java.shoes_service.entity.cart.CartEntity;
 import com.java.shoes_service.entity.cart.CartItemEntity;
@@ -51,13 +50,13 @@ public class CartService {
 
     public CartGetResponse getCart(String userId) {
         CartEntity cart = getOrCreateCart(userId);
-        sanitizeCartItemsAgainstStock(cart);      // dọn giỏ theo stock hiện tại
+        sanitizeCartItemsAgainstStock(cart);
         return buildCartGetResponse(cart);
     }
 
     @Transactional
     public CartGetResponse addToCart(String userId, CartCreateRequest req) {
-        if (req == null || req.getVariantId() == null || req.getVariantId().isBlank())
+        if (req == null || req.getVariantSizeId() == null || req.getVariantSizeId().isBlank())
             throw new AppException(ErrorCode.INVALID_REQUEST);
         if (req.getQuantity() <= 0)
             throw new AppException(ErrorCode.INVALID_REQUEST);
@@ -65,7 +64,7 @@ public class CartService {
         CartEntity cart = getOrCreateCart(userId);
 
         // req.getVariantId() giờ là variantSizeId (ID của VariantSizeEntity)
-        VariantSizeEntity variantSize = variantSizeRepository.findById(req.getVariantId())
+        VariantSizeEntity variantSize = variantSizeRepository.findById(req.getVariantSizeId())
                 .orElseThrow(() -> new AppException(ErrorCode.VARIANT_NOT_FOUND));
 
         VariantEntity variant = variantRepository.findById(variantSize.getVariantId())
@@ -77,8 +76,11 @@ public class CartService {
         // Tìm dòng cùng variantSize (so sánh theo variantSizeId)
         Optional<CartItemEntity> existing = cartItemRepository.findByCartId(cart.getId()).stream()
                 .filter(it -> it.getVariant() != null
-                        && req.getVariantId().equals(it.getVariant().getId()))
+                        && req.getVariantSizeId().equals(it.getVariant().getId()))
                 .findFirst();
+
+        // Tính giá sau giảm giá
+        Double effectivePrice = effectiveUnitPrice(product).doubleValue();
 
         if (existing.isPresent()) {
             int newQty = existing.get().getQuantity() + req.getQuantity();
@@ -86,6 +88,8 @@ public class CartService {
                 throw new AppException(ErrorCode.EXCEED_STOCK);
 
             existing.get().setQuantity(newQty);
+            // Cập nhật giá sau giảm giá (có thể product đã thay đổi discount)
+            existing.get().setPrice(effectivePrice);
             cartItemRepository.save(existing.get());
         } else {
             if (req.getQuantity() > variantSize.getStock())
@@ -104,6 +108,7 @@ public class CartService {
                     .productId(product.getId())
                     .variant(embedded)
                     .quantity(req.getQuantity())
+                    .price(effectivePrice) // Lưu giá sau giảm giá
                     .build();
             cartItemRepository.save(line);
         }
@@ -140,6 +145,13 @@ public class CartService {
         }
 
         item.setQuantity(quantity);
+        
+        // Cập nhật giá sau giảm giá khi update quantity (có thể product đã thay đổi discount)
+        ProductEntity product = productRepository.findById(item.getProductId())
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
+        Double effectivePrice = effectiveUnitPrice(product).doubleValue();
+        item.setPrice(effectivePrice);
+        
         cartItemRepository.save(item);
 
         updateCartSummary(cart);
@@ -309,7 +321,7 @@ public class CartService {
         List<CartItemEntity> items = cartItemRepository.findByCartId(cart.getId());
         cart.setCount(items.stream().mapToInt(CartItemEntity::getQuantity).sum());
 
-        // batch product
+        // batch product để cập nhật giá nếu cần
         List<String> productIds = items.stream().map(CartItemEntity::getProductId).distinct().toList();
         Map<String, ProductEntity> productMap = productRepository.findAllById(productIds).stream()
                 .collect(Collectors.toMap(ProductEntity::getId, p -> p));
@@ -318,7 +330,17 @@ public class CartService {
         for (CartItemEntity it : items) {
             ProductEntity p = productMap.get(it.getProductId());
             if (p == null) continue; // có thể vừa bị xoá/sai lệch
-            total = total.add(effectiveUnitPrice(p)
+            
+            // Sử dụng giá đã lưu trong CartItemEntity, nếu chưa có thì tính từ product
+            Double itemPrice = it.getPrice();
+            if (itemPrice == null) {
+                // Nếu chưa có giá, tính và lưu lại
+                itemPrice = effectiveUnitPrice(p).doubleValue();
+                it.setPrice(itemPrice);
+                cartItemRepository.save(it);
+            }
+            
+            total = total.add(java.math.BigDecimal.valueOf(itemPrice)
                     .multiply(java.math.BigDecimal.valueOf(it.getQuantity())));
         }
         cart.setTotalPrice(total.doubleValue());

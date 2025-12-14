@@ -94,12 +94,15 @@ public class UserVariantService {
         List<String> variantSizeIds = new ArrayList<>();
         
         for (UserVariantRequest item : items) {
+            // Get variantSize từ database
             VariantSizeEntity variantSize = variantSizeRepository.findById(item.getVariantSizeId())
                     .orElseThrow(() -> new AppException(ErrorCode.VARIANT_NOT_FOUND));
             
+            // Get variant từ database
             VariantEntity variant = variantRepository.findById(variantSize.getVariantId())
                     .orElseThrow(() -> new AppException(ErrorCode.VARIANT_NOT_FOUND));
             
+            // Get product từ database để lấy giá và discount mới nhất
             ProductEntity product = productRepository.findById(variant.getProductId())
                     .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
             
@@ -112,10 +115,8 @@ public class UserVariantService {
                 throw new AppException(ErrorCode.EXCEED_STOCK);
             }
             
-            // Tính giá từ product (có thể đã có discount của product)
-            double productPrice = product.getPrice();
-            double productDiscount = product.getDiscount();
-            double effectivePrice = productPrice * (1 - productDiscount / 100.0);
+            // Tự động tính giá sau giảm giá theo product
+            double effectivePrice = calculateEffectivePrice(product);
             
             totalPrice += effectivePrice * quantity;
             variantSizeIds.add(variantSize.getId());
@@ -151,14 +152,14 @@ public class UserVariantService {
             long quantity = item.getQuantity();
             
             // Tính giá cho variant này (phân bổ từ finishPrice)
+            // Tự động get product và tính giá sau giảm giá
             double itemPrice = 0.0;
             if (items.size() == 1) {
                 itemPrice = finishPrice;
             } else {
                 // Tính tỷ lệ giá của variant này so với tổng
-                double productPrice = product.getPrice();
-                double productDiscount = product.getDiscount();
-                double effectivePrice = productPrice * (1 - productDiscount / 100.0);
+                // Tự động tính giá sau giảm giá từ product
+                double effectivePrice = calculateEffectivePrice(product);
                 double itemTotalBeforeDiscount = effectivePrice * quantity;
                 double ratio = itemTotalBeforeDiscount / totalPrice;
                 itemPrice = finishPrice * ratio;
@@ -352,5 +353,24 @@ public class UserVariantService {
                 })
                 .filter(Objects::nonNull)
                 .toList();
+    }
+
+    /**
+     * Tính giá sau giảm giá theo product discount
+     * Tự động get product và tính giá hiệu quả
+     */
+    private double calculateEffectivePrice(ProductEntity product) {
+        if (product == null) {
+            throw new AppException(ErrorCode.PRODUCT_NOT_EXISTED);
+        }
+        
+        double productPrice = product.getPrice();
+        double productDiscount = product.getDiscount();
+        
+        // Đảm bảo discount trong khoảng hợp lệ [0, 100]
+        double discount = Math.max(0.0, Math.min(100.0, productDiscount));
+        
+        // Tính giá sau giảm giá
+        return productPrice * (1 - discount / 100.0);
     }
 }

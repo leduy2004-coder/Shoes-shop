@@ -52,21 +52,11 @@ public class CouponController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/create")
-    public ApiResponse<CouponResponse> create(@RequestBody CouponRequest request) {
-        CouponResponse response = couponService.create(request);
-        return ApiResponse.<CouponResponse>builder()
-                .result(response)
-                .build();
-    }
-
-    @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/update/{id}")
-    public ApiResponse<CouponResponse> update(
-            @PathVariable String id,
+    @PostMapping("/save")
+    public ApiResponse<CouponResponse> save(
             @RequestBody CouponRequest request
     ) {
-        CouponResponse response = couponService.update(id, request);
+        CouponResponse response = couponService.save(request);
         return ApiResponse.<CouponResponse>builder()
                 .result(response)
                 .build();

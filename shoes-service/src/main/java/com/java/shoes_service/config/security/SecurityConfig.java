@@ -34,7 +34,8 @@ public class SecurityConfig {
             "/brands/search",
             "/banners/get-by-slot/*",
             "/reviews/get-by-product",
-            "/categories/*"
+            "/categories/*",
+            "/payment/vn-pay-callback"
     };
 
     CorsConfigurationSource corsConfigurationSource;
