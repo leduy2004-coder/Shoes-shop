@@ -1,0 +1,48 @@
+app:
+  bootstrap:
+    admin:
+      email: admin
+      password: admin
+      name: Administrator
+server:
+  port: 8084
+  servlet:
+    context-path: /chat
+spring:
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+  cache:
+    type: redis
+
+  data:
+    mongodb:
+      uri: mongodb://root:abc123456@mongodb-broker-api:27017/chat-service?authSource=admin
+    redis:
+      host: redis-broker-api
+      port: 6379
+      repositories:
+        enabled: false
+      ssl:
+        enabled: false
+
+  application:
+    name: chat-service
+  security:
+    oauth2:
+      resource server:
+        jwt:
+          issuer-uri: http://api-gateway:8080/issuer
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: false
+    non-secure-port: ${server.port}
+    instance-id: ${spring.application.name}:${server.port}

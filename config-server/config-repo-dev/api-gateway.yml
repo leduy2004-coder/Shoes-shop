@@ -36,6 +36,13 @@ spring:
                 - Path=/api/v1/shoes/**
               filters:
                 - StripPrefix=2
+            # CHAT-SERVICE
+            - id: chat-service
+              uri: lb://chat-service
+              predicates:
+                - Path=/api/v1/chat/**
+              filters:
+                - StripPrefix=2
 eureka:
   client:
     fetch-registry: true

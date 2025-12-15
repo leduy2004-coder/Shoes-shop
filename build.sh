@@ -16,6 +16,7 @@ services=(
     "api-gateway"
     "shoes-service"
     "auth-service"
+    "chat-service"
     "file-service"
     "config-server"
     "eureka-server"

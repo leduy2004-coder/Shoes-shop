@@ -57,14 +57,14 @@ public class AuthenticationService {
     public IntrospectResponse introspect(IntrospectRequest request) {
         var token = request.getToken();
         boolean isValid = true;
-
+        String id = null;
         try {
-            verifyToken(token);
+            id = verifyToken(token);
         } catch (AppException e) {
             isValid = false;
         }
 
-        return IntrospectResponse.builder().valid(isValid).build();
+        return IntrospectResponse.builder().valid(isValid).userId(id).build();
     }
 
     public Boolean register(UserRequest request) {
@@ -142,7 +142,7 @@ public class AuthenticationService {
         return null;
     }
 
-    private void verifyToken(String token) {
+    private String verifyToken(String token) {
         try {
             // Parse và xác minh token
             Claims claims = Jwts.parserBuilder()
@@ -164,6 +164,8 @@ public class AuthenticationService {
             if (tokenRedisService.getRefreshToken(username) == null) {
                 throw new AppException(ErrorCode.UNAUTHENTICATED);
             }
+
+            return username;
 
         } catch (Exception e) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);

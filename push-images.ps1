@@ -4,6 +4,7 @@ $images = @(
     "shoes-shop-api-config-server",
     "shoes-shop-api-eureka-server",
     "shoes-shop-api-auth-service",
+    "shoes-shop-api-chat-service",
     "shoes-shop-api-api-gateway"
 )
 
