@@ -7,6 +7,7 @@ import com.java.auth_service.entity.RoleEntity;
 import com.java.auth_service.entity.UserEntity;
 import com.java.auth_service.exception.AppException;
 import com.java.auth_service.exception.ErrorCode;
+import com.java.auth_service.repository.RoleRepository;
 import com.java.auth_service.repository.UserRepository;
 import com.java.auth_service.service.RoleService;
 import com.java.auth_service.service.UserService;
@@ -31,6 +32,7 @@ public class UserImpl implements UserService {
    ModelMapper modelMapper;
    RoleService roleService;
    PasswordEncoder passwordEncoder;
+   RoleRepository roleRepository;
 
 
     @Override
@@ -87,18 +89,6 @@ public class UserImpl implements UserService {
         return modelMapper.map(user, UserResponse.class);
     }
 
-    @Override
-    public UserResponse findByEmail(String userName) {
-        UserEntity user = userRepository.findByEmail(userName)
-                .orElse(null);
-        if (user == null) {
-            return null;
-        }
-        UserResponse userResponse = modelMapper.map(user, UserResponse.class);
-
-        return userResponse;
-    }
-
     @PreAuthorize("hasRole('ADMIN')")
     @Override
     public List<UserResponse> findAll() {
@@ -126,5 +116,15 @@ public class UserImpl implements UserService {
                 .toList();
     }
 
+    @Override
+    public UserResponse findAdmin() {
+        RoleEntity adminRole = roleRepository.findByCode("ADMIN")
+                .orElseThrow(() -> new RuntimeException("Role ADMIN not found"));
 
+        UserEntity adminUser = userRepository
+                .findFirstByRoleId(adminRole.getId())
+                .orElse(null);
+
+        return modelMapper.map(adminUser, UserResponse.class);
+    }
 }

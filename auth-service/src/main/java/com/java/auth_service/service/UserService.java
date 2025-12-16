@@ -13,6 +13,6 @@ public interface UserService {
     UserResponse findById(String id);
     UserResponse addUser(UserRequest userDto);
     List<UserResponse> findAll();
-    UserResponse findByEmail(String userName);
+    UserResponse findAdmin();
     UserResponse updateUser(UserUpdateRequest userRequest);
 }

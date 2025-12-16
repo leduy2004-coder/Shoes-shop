@@ -24,4 +24,11 @@ public class InternalUserProfileController {
                 .result(userService.findById(userId))
                 .build();
     }
+
+    @GetMapping("/internal/admin")
+    ApiResponse<UserResponse> getAdmin() {
+        return ApiResponse.<UserResponse>builder()
+                .result(userService.findAdmin())
+                .build();
+    }
 }

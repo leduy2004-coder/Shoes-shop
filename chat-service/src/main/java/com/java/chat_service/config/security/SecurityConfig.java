@@ -30,7 +30,6 @@ public class SecurityConfig {
     private static final String[] WHITE_LIST_URL = {
     };
 
-    LogoutHandler logoutHandler;
     CorsConfigurationSource corsConfigurationSource;
     JwtAuthenticationConverter jwtAuthenticationConverter;
 
@@ -42,7 +41,6 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest()
                         .authenticated())
-                .oauth2Login(withDefaults())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
                 )
@@ -50,14 +48,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
                         .accessDeniedHandler(new BearerTokenAccessDeniedHandler())
                 )
-                .sessionManagement(session -> session.sessionCreationPolicy(STATELESS))
-                .logout(logout ->
-                        logout.logoutUrl("/auth/logout")
-                                .addLogoutHandler(logoutHandler)
-                                .logoutSuccessHandler((request, response, authentication) ->
-                                        SecurityContextHolder.clearContext()
-                                )
-                );
+                .sessionManagement(session -> session.sessionCreationPolicy(STATELESS));
         return http.build();
     }
 

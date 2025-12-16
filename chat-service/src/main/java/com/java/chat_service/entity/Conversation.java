@@ -7,7 +7,6 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.MongoId;
 
 import java.time.Instant;
-import java.util.List;
 
 @Setter
 @Getter
@@ -21,25 +20,15 @@ public class Conversation {
     String id;
 
     @Indexed(unique = true)
-    String participantsHash;
+    String userId;
+
+    String name;
 
     @Indexed
-    String adminId; // ID của admin trong conversation (để dễ query)
-
-    List<ParticipantInfo> participants;
+    String adminId;
 
     Instant createdDate;
 
     Instant modifiedDate;
 
-    @Setter
-    @Getter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @FieldDefaults(level = AccessLevel.PRIVATE)
-    public static class ParticipantInfo {
-        String userId;
-        String name; // Chỉ cần id và name
-    }
 }
