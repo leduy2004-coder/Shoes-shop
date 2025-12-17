@@ -114,34 +114,41 @@ public class ProductController {
     }
 
     @GetMapping("/purchased")
-    public ApiResponse<List<UserPurchasedItemResponse>> getPurchasedByUser() {
+    public ApiResponse<PageResponse<UserPurchasedItemResponse>> getPurchasedByUser(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
         // User thường: tự động lấy userId từ token
-        List<UserPurchasedItemResponse> data = userVariantService.getPurchasedByUserFromToken();
-        return ApiResponse.<List<UserPurchasedItemResponse>>builder()
+        PageResponse<UserPurchasedItemResponse> data = userVariantService.getPurchasedByUserFromToken(page, size);
+        return ApiResponse.<PageResponse<UserPurchasedItemResponse>>builder()
                 .result(data)
                 .build();
     }
 
     @GetMapping("/purchased/by-product/{productId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<List<UserPurchasedItemResponse>> getPurchasedByProductId(
-            @PathVariable String productId
+    public ApiResponse<PageResponse<UserPurchasedItemResponse>> getPurchasedByProductId(
+            @PathVariable String productId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
         // Admin: lấy lịch sử ai đã mua product này
-        List<UserPurchasedItemResponse> data = userVariantService.getPurchasedByProductId(productId);
-        return ApiResponse.<List<UserPurchasedItemResponse>>builder()
+        PageResponse<UserPurchasedItemResponse> data = userVariantService.getPurchasedByProductId(productId, page, size);
+        return ApiResponse.<PageResponse<UserPurchasedItemResponse>>builder()
                 .result(data)
                 .build();
     }
 
     @GetMapping("/purchased/by-user/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<List<UserPurchasedItemResponse>> getPurchasedByUserId(
-            @PathVariable String userId
+    public ApiResponse<PageResponse<UserPurchasedItemResponse>> getPurchasedByUserId(
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
         // Admin: lấy lịch sử mua của user cụ thể
-        List<UserPurchasedItemResponse> data = userVariantService.getPurchasedByUser(userId);
-        return ApiResponse.<List<UserPurchasedItemResponse>>builder()
+        PageResponse<UserPurchasedItemResponse> data = userVariantService.getPurchasedByUser(userId, page, size);
+        return ApiResponse.<PageResponse<UserPurchasedItemResponse>>builder()
                 .result(data)
                 .build();
     }

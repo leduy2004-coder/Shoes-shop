@@ -19,6 +19,7 @@ public class ChatMessageRequest {
     @NotNull
     String message;
 
+    // Thông tin người gửi (truyền từ client)
     @NotBlank
     @NotNull
     String senderId;

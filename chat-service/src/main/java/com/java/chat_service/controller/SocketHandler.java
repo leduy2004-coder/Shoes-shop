@@ -14,7 +14,6 @@ import com.java.chat_service.repository.ConversationRepository;
 import com.java.chat_service.service.ChatMessageService;
 import com.java.chat_service.service.IdentityService;
 import com.java.chat_service.service.WebSocketSessionService;
-import com.java.chat_service.utility.GetInfo;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.AccessLevel;
@@ -49,7 +48,6 @@ public class SocketHandler {
         // If Token is invalid disconnect
         if (introspectResponse.isValid()) {
             log.info("Client connected: {}", client.getSessionId());
-
             // Persist webSocketSession
             WebSocketSession webSocketSession = WebSocketSession.builder()
                     .socketSessionId(client.getSessionId().toString())
@@ -61,8 +59,7 @@ public class SocketHandler {
             // Join room với userId để dễ dàng gửi message
             client.joinRoom(introspectResponse.getUserId());
 
-            log.info("WebSocketSession created with id: {} for user: {}",
-                    webSocketSession.getId(), introspectResponse.getUserId());
+            log.info("WebSocketSession created with id: {} for user: {}", webSocketSession.getId(), introspectResponse.getUserId());
         } else {
             log.error("Authentication fail: {}", client.getSessionId());
             client.disconnect();
@@ -75,6 +72,75 @@ public class SocketHandler {
         webSocketSessionService.deleteSession(client.getSessionId().toString());
     }
 
+    @OnEvent("send_message")
+    public void onSendMessage(SocketIOClient client, ChatMessageRequest request) {
+        try {
+            // Lấy userId từ session
+            WebSocketSession session = webSocketSessionService.findBySocketSessionId(client.getSessionId().toString());
+            if (session == null) {
+                log.error("Session not found for client: {}", client.getSessionId());
+                client.sendEvent("error", "Session not found");
+                return;
+            }
+
+            String senderId = session.getUserId();
+
+            // Validate: senderId phải khớp với session
+            if (!senderId.equals(request.getSenderId())) {
+                log.error("SenderId mismatch: session={}, request={}", senderId, request.getSenderId());
+                client.sendEvent("error", "SenderId mismatch");
+                return;
+            }
+
+            // Kiểm tra conversation tồn tại và user có trong conversation
+            Conversation conversation = conversationRepository.findById(request.getConversationId())
+                    .orElse(null);
+
+            if (conversation == null) {
+                log.error("Conversation not found: {}", request.getConversationId());
+                client.sendEvent("error", "Conversation not found");
+                return;
+            }
+
+            // Validate: chỉ có 2 người trong conversation
+            if (conversation.getParticipants().size() != 2) {
+                log.error("Conversation must have exactly 2 participants: {}", request.getConversationId());
+                client.sendEvent("error", "Invalid conversation");
+                return;
+            }
+
+            // Kiểm tra user có trong conversation không
+            boolean isParticipant = conversation.getParticipants().stream()
+                    .anyMatch(p -> p.getUserId().equals(senderId));
+
+            if (!isParticipant) {
+                log.error("User {} is not a participant in conversation {}", senderId, request.getConversationId());
+                client.sendEvent("error", "Not a participant");
+                return;
+            }
+
+            // Nếu client không gửi senderName, lấy từ conversation
+            if (request.getSenderName() == null || request.getSenderName().isEmpty()) {
+                String senderName = conversation.getParticipants().stream()
+                        .filter(p -> p.getUserId().equals(senderId))
+                        .findFirst()
+                        .map(Conversation.ParticipantInfo::getName)
+                        .orElse(senderId);
+                request.setSenderName(senderName);
+            }
+
+            // Lưu message vào database và gửi qua WebSocket
+            ChatMessageResponse messageResponse = chatMessageService.create(request);
+
+            // Gửi confirmation về cho sender
+            client.sendEvent("message_sent", messageResponse);
+            log.info("Message sent successfully from user: {} in conversation: {}", senderId, request.getConversationId());
+
+        } catch (Exception e) {
+            log.error("Error handling send_message event: {}", e.getMessage(), e);
+            client.sendEvent("error", "Failed to send message: " + e.getMessage());
+        }
+    }
 
     @PostConstruct
     public void startServer() {

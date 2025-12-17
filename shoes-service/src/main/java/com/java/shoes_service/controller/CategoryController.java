@@ -2,6 +2,7 @@ package com.java.shoes_service.controller;
 
 
 import com.java.shoes_service.dto.ApiResponse;
+import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.category.CategoryGetResponse;
 import com.java.shoes_service.dto.category.CategoryRequest;
 import com.java.shoes_service.dto.category.CategoryResponse;
@@ -13,8 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequiredArgsConstructor
 @Slf4j
@@ -24,9 +23,13 @@ public class CategoryController {
     CategoryService categoryService;
 
     @GetMapping("/get-all")
-    public ApiResponse<List<CategoryGetResponse>> getAllCategories() {
-        List<CategoryGetResponse> data = categoryService.getAll();
-        return ApiResponse.<List<CategoryGetResponse>>builder()
+    public ApiResponse<PageResponse<CategoryGetResponse>> getAllCategories(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String name
+    ) {
+        PageResponse<CategoryGetResponse> data = categoryService.getAll(page, size, name);
+        return ApiResponse.<PageResponse<CategoryGetResponse>>builder()
                 .result(data)
                 .build();
     }

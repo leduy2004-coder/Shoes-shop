@@ -1,5 +1,6 @@
 package com.java.shoes_service.service;
 
+import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.category.CategoryGetResponse;
 import com.java.shoes_service.dto.category.CategoryRequest;
 import com.java.shoes_service.dto.category.CategoryResponse;
@@ -11,9 +12,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -25,14 +31,22 @@ public class CategoryService {
     ProductRepository productRepository;
     ModelMapper modelMapper;
 
+    public PageResponse<CategoryGetResponse> getAll(int page, int size, String name) {
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdDate");
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), sort);
 
-    public List<CategoryGetResponse> getAll() {
-        List<CategoryEntity> categories = categoryRepository.findAll();
+        Page<CategoryEntity> p;
+        if (name == null || name.isBlank()) {
+            p = categoryRepository.findAll(pageable);
+        } else {
+            // Regex ".*name.*" không phân biệt hoa/thường
+            String pattern = ".*" + Pattern.quote(name.trim()) + ".*";
+            p = categoryRepository.findByNameRegexIgnoreCase(pattern, pageable);
+        }
 
-        return categories.stream()
+        List<CategoryGetResponse> items = p.getContent().stream()
                 .map(category -> {
                     long count = productRepository.countByCategory_Id(category.getId());
-
                     return CategoryGetResponse.builder()
                             .id(category.getId())
                             .name(category.getName())
@@ -41,6 +55,8 @@ public class CategoryService {
                             .build();
                 })
                 .toList();
+
+        return new PageResponse<>(page, p.getSize(), p.getTotalElements(), p.getTotalPages(), items);
     }
 
     public CategoryResponse create(CategoryRequest request) {

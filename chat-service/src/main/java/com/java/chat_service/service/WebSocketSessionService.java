@@ -9,6 +9,8 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -22,5 +24,14 @@ public class WebSocketSessionService {
 
     public void deleteSession(String sessionId) {
         webSocketSessionRepository.deleteBySocketSessionId(sessionId);
+    }
+
+    public List<WebSocketSession> findSessionsByUserIds(List<String> userIds) {
+        return webSocketSessionRepository.findAllByUserIdIn(userIds);
+    }
+
+    public WebSocketSession findBySocketSessionId(String socketSessionId) {
+        return webSocketSessionRepository.findBySocketSessionId(socketSessionId)
+                .orElse(null);
     }
 }

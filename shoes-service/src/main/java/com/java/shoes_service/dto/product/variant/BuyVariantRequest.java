@@ -15,5 +15,6 @@ import java.util.List;
 public class BuyVariantRequest {
     List<UserVariantRequest> items;
     String couponCode; // Mã giảm giá (có thể null)
+    String addressId;
 }
 

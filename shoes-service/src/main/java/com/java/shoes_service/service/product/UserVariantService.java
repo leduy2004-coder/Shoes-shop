@@ -1,6 +1,7 @@
 package com.java.shoes_service.service.product;
 
 
+import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.product.product.ProductGetResponse;
 import com.java.shoes_service.dto.product.product.UserPurchasedItemResponse;
 import com.java.shoes_service.dto.product.variant.BuyVariantRequest;
@@ -13,9 +14,11 @@ import com.java.shoes_service.entity.product.UserVariantEntity;
 import com.java.shoes_service.entity.product.VariantEntity;
 import com.java.shoes_service.entity.product.VariantSizeEntity;
 import com.java.shoes_service.entity.promotion.CouponEntity;
+import com.java.shoes_service.entity.shipping.UserAddress;
 import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
 import com.java.shoes_service.entity.product.HistoryProductEntity;
+import com.java.shoes_service.repository.UserAddressRepository;
 import com.java.shoes_service.repository.order.PurchaseOrderRepository;
 import com.java.shoes_service.repository.product.HistoryProductRepository;
 import com.java.shoes_service.repository.product.ProductRepository;
@@ -29,6 +32,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,6 +59,7 @@ public class UserVariantService {
     PurchaseOrderRepository purchaseOrderRepository;
     CouponRepository couponRepository;
     HistoryProductRepository historyProductRepository;
+    UserAddressRepository userAddressRepository;
     ModelMapper modelMapper;
 
     @Transactional
@@ -67,6 +75,12 @@ public class UserVariantService {
 
         List<UserVariantRequest> items = request.getItems();
         String couponCode = request.getCouponCode();
+        String addressId = request.getAddressId();
+        
+        // Validate addressId
+        if (addressId == null || addressId.isBlank()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
         
         // 1. Validate và lấy coupon nếu có
         CouponEntity coupon = null;
@@ -188,6 +202,7 @@ public class UserVariantService {
                     .variantSizeId(variantSize.getId()) // Lưu variantSizeId
                     .quantity(quantity)
                     .totalPrice(itemPrice)
+                    .addressId(addressId) // Lưu addressId
                     .build();
             
             userVariant = userVariantRepository.save(userVariant);
@@ -214,6 +229,7 @@ public class UserVariantService {
                 .finishPrice(finishPrice)
                 .couponCode(couponCode)
                 .discountPercent(discountPercent)
+                .addressId(addressId) // Lưu addressId
                 .build();
         
         purchaseOrderRepository.save(purchaseOrder);
@@ -221,10 +237,25 @@ public class UserVariantService {
         return responses;
     }
 
-    public List<UserPurchasedItemResponse> getPurchasedByUser(String userId) {
-        List<UserVariantEntity> userVariants = userVariantRepository.findByUserId(userId);
+    public PageResponse<UserPurchasedItemResponse> getPurchasedByUser(String userId, int page, int size) {
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdDate");
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), sort);
+        
+        Page<UserVariantEntity> userVariantsPage = userVariantRepository.findByUserId(userId, pageable);
+        
+        // Lấy tất cả addressIds để batch load
+        List<String> addressIds = userVariantsPage.getContent().stream()
+                .map(UserVariantEntity::getAddressId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        
+        Map<String, UserAddress> addressMap = addressIds.isEmpty() 
+                ? Map.of()
+                : userAddressRepository.findAllById(addressIds).stream()
+                        .collect(Collectors.toMap(UserAddress::getId, addr -> addr));
 
-        return userVariants.stream()
+        List<UserPurchasedItemResponse> items = userVariantsPage.getContent().stream()
                 .map(uv -> {
                     // uv.getVariantId() giờ là variantSizeId
                     VariantSizeEntity variantSize = variantSizeRepository.findById(uv.getVariantSizeId())
@@ -260,27 +291,41 @@ public class UserVariantService {
                             .countSell(variantSize.getCountSell())
                             .build();
 
+                    // Lấy address từ addressId
+                    UserAddress address = uv.getAddressId() != null 
+                            ? addressMap.get(uv.getAddressId()) 
+                            : null;
+
                     return UserPurchasedItemResponse.builder()
                             .product(productDto)
                             .variant(variantDto)
                             .countBuy(uv.getQuantity())
                             .totalMoney(uv.getTotalPrice())
                             .userId(uv.getUserId()) // Thêm userId để admin biết ai mua
+                            .address(address) // Thêm address
                             .build();
                 })
                 .filter(Objects::nonNull)
                 .toList();
+
+        return new PageResponse<>(
+                page,
+                userVariantsPage.getSize(),
+                userVariantsPage.getTotalElements(),
+                userVariantsPage.getTotalPages(),
+                items
+        );
     }
 
-    public List<UserPurchasedItemResponse> getPurchasedByUserFromToken() {
+    public PageResponse<UserPurchasedItemResponse> getPurchasedByUserFromToken(int page, int size) {
         String userId = GetInfo.getLoggedInUserName();
         if (userId == null) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
-        return getPurchasedByUser(userId);
+        return getPurchasedByUser(userId, page, size);
     }
 
-    public List<UserPurchasedItemResponse> getPurchasedByProductId(String productId) {
+    public PageResponse<UserPurchasedItemResponse> getPurchasedByProductId(String productId, int page, int size) {
         if (productId == null || productId.isBlank()) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
@@ -292,7 +337,7 @@ public class UserVariantService {
         // Lấy tất cả VariantEntity của product
         List<VariantEntity> variants = variantRepository.findByProductId(productId);
         if (variants.isEmpty()) {
-            return List.of();
+            return new PageResponse<>(page, size, 0, 0, List.of());
         }
 
         // Lấy tất cả VariantSizeEntity của các variants
@@ -306,11 +351,25 @@ public class UserVariantService {
                 .toList();
 
         if (variantSizeIds.isEmpty()) {
-            return List.of();
+            return new PageResponse<>(page, size, 0, 0, List.of());
         }
 
-        // Lấy tất cả UserVariantEntity có variantSizeId trong danh sách
-        List<UserVariantEntity> userVariants = userVariantRepository.findByVariantSizeIdIn(variantSizeIds);
+        // Phân trang UserVariantEntity có variantSizeId trong danh sách
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdDate");
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), sort);
+        Page<UserVariantEntity> userVariantsPage = userVariantRepository.findByVariantSizeIdIn(variantSizeIds, pageable);
+
+        // Lấy tất cả addressIds để batch load
+        List<String> addressIds = userVariantsPage.getContent().stream()
+                .map(UserVariantEntity::getAddressId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        
+        Map<String, UserAddress> addressMap = addressIds.isEmpty() 
+                ? Map.of()
+                : userAddressRepository.findAllById(addressIds).stream()
+                        .collect(Collectors.toMap(UserAddress::getId, addr -> addr));
 
         // Map sang response
         Map<String, VariantSizeEntity> variantSizeMap = variantSizes.stream()
@@ -319,7 +378,7 @@ public class UserVariantService {
         Map<String, VariantEntity> variantMap = variants.stream()
                 .collect(Collectors.toMap(VariantEntity::getId, v -> v));
 
-        return userVariants.stream()
+        List<UserPurchasedItemResponse> items = userVariantsPage.getContent().stream()
                 .map(uv -> {
                     VariantSizeEntity variantSize = variantSizeMap.get(uv.getVariantSizeId());
                     if (variantSize == null) return null;
@@ -343,16 +402,30 @@ public class UserVariantService {
                             .countSell(variantSize.getCountSell())
                             .build();
 
+                    // Lấy address từ addressId
+                    UserAddress address = uv.getAddressId() != null 
+                            ? addressMap.get(uv.getAddressId()) 
+                            : null;
+
                     return UserPurchasedItemResponse.builder()
                             .product(productDto)
                             .variant(variantDto)
                             .countBuy(uv.getQuantity())
                             .totalMoney(uv.getTotalPrice())
                             .userId(uv.getUserId())
+                            .address(address) // Thêm address
                             .build();
                 })
                 .filter(Objects::nonNull)
                 .toList();
+
+        return new PageResponse<>(
+                page,
+                userVariantsPage.getSize(),
+                userVariantsPage.getTotalElements(),
+                userVariantsPage.getTotalPages(),
+                items
+        );
     }
 
     /**

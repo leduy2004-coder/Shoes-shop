@@ -11,6 +11,7 @@ import lombok.experimental.FieldDefaults;
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class BrandRequest {
+    String id;
     String name;
     String logo;
 }

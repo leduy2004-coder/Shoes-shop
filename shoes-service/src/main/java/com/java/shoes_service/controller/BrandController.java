@@ -46,12 +46,12 @@ public class BrandController {
                 .build();
     }
 
-    @PostMapping("/create")
-    public ApiResponse<BrandGetResponse> create(
+    @PostMapping("/create-or-update")
+    public ApiResponse<BrandGetResponse> createOrUpdate(
             @RequestPart("request") BrandRequest request,
             @RequestPart(value = "file", required = false) MultipartFile file)
     {
-        BrandGetResponse response = brandService.create(request, file);
+        BrandGetResponse response = brandService.createOrUpdate(request, file);
         return ApiResponse.<BrandGetResponse>builder()
                 .result(response)
                 .build();

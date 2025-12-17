@@ -1,8 +1,9 @@
 package com.java.chat_service.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.mongodb.core.mapping.MongoId;
 
 @Data
 @Builder
@@ -11,10 +12,19 @@ import org.springframework.data.mongodb.core.mapping.MongoId;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ConversationRequest {
 
-    @MongoId
-    String id;
+    @NotBlank
+    @NotNull
+    String senderId;
 
+    @NotBlank
+    @NotNull
+    String senderName;
+
+    @NotBlank
+    @NotNull
     String participantId;
 
+    @NotBlank
+    @NotNull
     String participantName;
 }
