@@ -114,7 +114,7 @@ public class OAuth2UserService {
 
         UserEntity newUser = UserEntity.builder()
                 .email(email)
-                .password(UUID.randomUUID().toString())
+                .password("")
                 .status(true)
                 .role(role)
                 .build();
@@ -131,7 +131,7 @@ public class OAuth2UserService {
         String accessToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-        tokenRedisService.saveRefreshToken(user.getEmail(), refreshToken);
+        tokenRedisService.saveRefreshToken(user.getId(), refreshToken);
         UserRegisterResponse userRegisterResponse = modelMapper.map(user, UserRegisterResponse.class);
         return AuthenticationResponse.builder()
                 .accessToken(accessToken)

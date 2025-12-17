@@ -115,6 +115,8 @@ services:
         condition: service_started   # đổi từ service_healthy
       file-service:
         condition: service_started
+      chat-service:
+        condition: service_started
     restart: always
     environment:
       - TZ=Asia/Tokyo
@@ -161,6 +163,29 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+  chat-service:
+    container_name: chat-service
+    build:
+      context: .
+      dockerfile: ./chat-service/Dockerfile
+    env_file:
+      - ./chat-service/.env
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    restart: always
+    ports:
+      - "8084:8084"
+    environment:
+      - TZ=Asia/Tokyo
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    networks: [shoes-shop]
+    deploy: { mode: replicated, replicas: 1 }
+    volumes:
+      - ./chat-service/logs:/opt/target/logs
+    # (removed) healthcheck
 
   mongodb:
     image: bitnami/mongodb:latest

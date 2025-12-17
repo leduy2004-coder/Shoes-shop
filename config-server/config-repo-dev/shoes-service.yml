@@ -45,4 +45,4 @@ payment:
     version: 2.1.0
     command: pay
     orderType: other
-    returnUrlAfterPayment: http://localhost:3000
+    returnUrlAfterPayment: http://localhost:3000/checkout/success

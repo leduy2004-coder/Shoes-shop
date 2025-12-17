@@ -27,11 +27,14 @@ public class BrandController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String name,
             @RequestParam(required = false, name = "sort_by") String sortBy,
             @RequestParam(required = false, name = "sort_order") String sortOrder
     ) {
+        // Ưu tiên name nếu có, nếu không thì dùng search
+        String nameParam = (name != null && !name.isBlank()) ? name : search;
         PageResponse<BrandGetResponse> response = brandService.searchBrands(
-                page, size, search, sortBy, sortOrder
+                page, size, nameParam, sortBy, sortOrder
         );
         return ApiResponse.<PageResponse<BrandGetResponse>>builder()
                 .result(response)
