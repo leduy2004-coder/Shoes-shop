@@ -26,12 +26,4 @@ public class WebSocketSessionService {
         webSocketSessionRepository.deleteBySocketSessionId(sessionId);
     }
 
-    public List<WebSocketSession> findSessionsByUserIds(List<String> userIds) {
-        return webSocketSessionRepository.findAllByUserIdIn(userIds);
-    }
-
-    public WebSocketSession findBySocketSessionId(String socketSessionId) {
-        return webSocketSessionRepository.findBySocketSessionId(socketSessionId)
-                .orElse(null);
-    }
 }

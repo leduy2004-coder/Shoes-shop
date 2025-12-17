@@ -20,13 +20,15 @@ public class Conversation {
     String id;
 
     @Indexed(unique = true)
-    String participantsHash;
-
     String userId;
+
     String name;
+
+    @Indexed
+    String adminId;
 
     Instant createdDate;
 
     Instant modifiedDate;
-    
+
 }
