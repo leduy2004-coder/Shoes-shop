@@ -9,6 +9,7 @@ import com.java.shoes_service.exception.ErrorCode;
 import com.java.shoes_service.repository.BrandRepository;
 import com.java.shoes_service.repository.httpClient.FileClient;
 import com.java.shoes_service.repository.product.ProductRepository;
+import com.java.shoes_service.entity.product.ProductEntity;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -35,16 +36,48 @@ public class BrandService {
     ProductRepository productRepository;
 
     public PageResponse<BrandGetResponse> searchBrands(
-            int page, int size, String name, String sortBy, String sortOrder
+            int page, int size, String name, String productId, String sortBy, String sortOrder
     ) {
         Sort sort = resolveSort(sortBy, sortOrder);
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), sort);
 
         Page<BrandEntity> p;
+        
+        // Nếu có productId, lấy brand của product đó
+        String brandIdFilter = null;
+        if (productId != null && !productId.isBlank()) {
+            ProductEntity product = productRepository.findById(productId.trim())
+                    .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
+            if (product.getBrand() != null) {
+                brandIdFilter = product.getBrand().getId();
+            }
+        }
+        
+        // Nếu có brandIdFilter, chỉ lấy brand đó (kết hợp với name filter nếu có)
+        if (brandIdFilter != null) {
+            BrandEntity brand = brandRepository.findById(brandIdFilter)
+                    .orElseThrow(() -> new AppException(ErrorCode.BRAND_NOT_FOUND));
+            
+            // Kiểm tra name filter nếu có
+            if (name != null && !name.isBlank()) {
+                String brandName = brand.getName();
+                String pattern = ".*" + Pattern.quote(name.trim()) + ".*";
+                if (!brandName.matches("(?i)" + pattern)) {
+                    // Brand không khớp với name filter, trả về empty
+                    return new PageResponse<>(page, size, 0, 0, List.of());
+                }
+            }
+            
+            // Trả về brand duy nhất
+            List<BrandGetResponse> items = List.of(mapToBrandGetResponse(brand));
+            return new PageResponse<>(page, 1, 1, 1, items);
+        }
+        
+        // Không có productId, tìm theo name như cũ
         if (name == null || name.isBlank()) {
             p = brandRepository.findAll(pageable);  // ← lấy tất cả
         } else {
-            // Regex “.*name.*” không phân biệt hoa/thường
+            // Regex ".*name.*" không phân biệt hoa/thường
             String pattern = ".*" + Pattern.quote(name.trim()) + ".*";
             p = brandRepository.findByNameRegexIgnoreCase(pattern, pageable);
         }
@@ -96,7 +129,11 @@ public class BrandService {
     }
 
     private BrandGetResponse mapToBrandGetResponse(BrandEntity entity) {
-        return modelMapper.map(entity, BrandGetResponse.class);
+        BrandGetResponse response = modelMapper.map(entity, BrandGetResponse.class);
+        // Lấy số lượng product của brand
+        long countProduct = productRepository.countByBrand_Id(entity.getId());
+        response.setCountProduct((int) countProduct);
+        return response;
     }
 
     private Sort resolveSort(String sortBy, String sortOrder) {

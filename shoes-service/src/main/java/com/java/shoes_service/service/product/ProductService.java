@@ -51,7 +51,6 @@ public class ProductService {
     CategoryRepository categoryRepository;
     BrandRepository brandRepository;
     VariantRepository variantRepository;
-    HistoryProductRepository historyProductRepository;
     ReviewRepository reviewRepository;
     VariantService variantService;
 
@@ -81,49 +80,6 @@ public class ProductService {
         List<VariantGroupResponse> list = variantService.getVariantsGroupedByProductId(productId);
         List<CloudinaryResponse> listImage = fileClient.getImage(productId, ImageType.PRODUCT).getResult();
         return ProductGetDetailResponse.builder().product(productGetResponse).variants(list).listImg(listImage).build();
-    }
-
-    public PageResponse<ProductGetResponse> getProductsByBrandId(String brandId, int page, int size) {
-        if (brandId == null || brandId.isBlank()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-
-        // Validate brand exists
-        if (!brandRepository.existsById(brandId)) {
-            throw new AppException(ErrorCode.BRAND_NOT_FOUND);
-        }
-
-        // Build query with brandId filter
-        Query query = new Query();
-        query.addCriteria(Criteria.where("brand.id").is(brandId.trim()));
-
-        // Sort by createdDate descending
-        Sort sort = Sort.by(Sort.Direction.DESC, "createdDate");
-        query.with(sort);
-
-        // Paging (controller 1-based)
-        int pageIndex = Math.max(0, page - 1);
-        int pageSize = Math.max(1, size);
-        query.skip((long) pageIndex * pageSize).limit(pageSize);
-
-        // Execute
-        List<ProductEntity> content = mongoTemplate.find(query, ProductEntity.class);
-        long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), ProductEntity.class);
-
-        // Map DTO
-        List<ProductGetResponse> items = content.stream()
-                .map(this::mapToProductGetResponse)
-                .toList();
-
-        int totalPages = (int) Math.ceil((double) total / pageSize);
-
-        return new PageResponse<>(
-                page,
-                pageSize,
-                total,
-                totalPages,
-                items
-        );
     }
 
     public PageResponse<ProductGetResponse> searchProducts(

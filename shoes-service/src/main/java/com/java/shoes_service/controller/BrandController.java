@@ -31,13 +31,14 @@ public class BrandController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String name,
+            @RequestParam(required = false, name = "product_id") String productId,
             @RequestParam(required = false, name = "sort_by") String sortBy,
             @RequestParam(required = false, name = "sort_order") String sortOrder
     ) {
         // Ưu tiên name nếu có, nếu không thì dùng search
         String nameParam = (name != null && !name.isBlank()) ? name : search;
         PageResponse<BrandGetResponse> response = brandService.searchBrands(
-                page, size, nameParam, sortBy, sortOrder
+                page, size, nameParam, productId, sortBy, sortOrder
         );
         return ApiResponse.<PageResponse<BrandGetResponse>>builder()
                 .result(response)
@@ -48,18 +49,6 @@ public class BrandController {
     public ApiResponse<BrandGetResponse> getBrandById(@PathVariable String id) {
         BrandGetResponse response = brandService.getBrandById(id);
         return ApiResponse.<BrandGetResponse>builder()
-                .result(response)
-                .build();
-    }
-
-    @GetMapping("/{id}/products")
-    public ApiResponse<PageResponse<ProductGetResponse>> getProductsByBrandId(
-            @PathVariable String id,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        PageResponse<ProductGetResponse> response = productService.getProductsByBrandId(id, page, size);
-        return ApiResponse.<PageResponse<ProductGetResponse>>builder()
                 .result(response)
                 .build();
     }

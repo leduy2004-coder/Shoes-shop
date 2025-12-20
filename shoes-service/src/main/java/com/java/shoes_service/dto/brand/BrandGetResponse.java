@@ -18,4 +18,5 @@ public class BrandGetResponse {
     String logo;
     Instant createdDate;
     Instant modifiedDate;
+    Integer countProduct;
 }

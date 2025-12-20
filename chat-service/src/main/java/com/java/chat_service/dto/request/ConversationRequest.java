@@ -14,14 +14,6 @@ public class ConversationRequest {
 
     @NotBlank
     @NotNull
-    String senderId;
-
-    @NotBlank
-    @NotNull
-    String senderName;
-
-    @NotBlank
-    @NotNull
     String participantId;
 
     @NotBlank

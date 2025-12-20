@@ -4,17 +4,10 @@ import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.annotation.OnConnect;
 import com.corundumstudio.socketio.annotation.OnDisconnect;
-import com.corundumstudio.socketio.annotation.OnEvent;
 import com.java.IntrospectRequest;
-import com.java.chat_service.dto.request.ChatMessageRequest;
-import com.java.chat_service.dto.response.ChatMessageResponse;
-import com.java.chat_service.entity.Conversation;
 import com.java.chat_service.entity.WebSocketSession;
-import com.java.chat_service.repository.ConversationRepository;
-import com.java.chat_service.service.ChatMessageService;
-import com.java.chat_service.service.IdentityService;
+import com.java.chat_service.repository.feignClient.IdentityChatClient;
 import com.java.chat_service.service.WebSocketSessionService;
-import com.java.chat_service.utility.GetInfo;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.AccessLevel;
@@ -31,7 +24,7 @@ import java.time.Instant;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SocketHandler {
     SocketIOServer server;
-    IdentityService identityService;
+    IdentityChatClient identityService;
     WebSocketSessionService webSocketSessionService;
 
     @OnConnect
@@ -45,22 +38,22 @@ public class SocketHandler {
                 .build());
 
         // If Token is invalid disconnect
-        if (introspectResponse.isValid()) {
+        if (introspectResponse.getResult().isValid()) {
             log.info("Client connected: {}", client.getSessionId());
 
             // Persist webSocketSession
             WebSocketSession webSocketSession = WebSocketSession.builder()
                     .socketSessionId(client.getSessionId().toString())
-                    .userId(introspectResponse.getUserId())
+                    .userId(introspectResponse.getResult().getUserId())
                     .createdAt(Instant.now())
                     .build();
             webSocketSession = webSocketSessionService.create(webSocketSession);
 
             // Join room với userId để dễ dàng gửi message
-            client.joinRoom(introspectResponse.getUserId());
+            client.joinRoom(introspectResponse.getResult().getUserId());
 
             log.info("WebSocketSession created with id: {} for user: {}",
-                    webSocketSession.getId(), introspectResponse.getUserId());
+                    webSocketSession.getId(), introspectResponse.getResult().getUserId());
         } else {
             log.error("Authentication fail: {}", client.getSessionId());
             client.disconnect();

@@ -147,8 +147,8 @@ public class ProductController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        // Admin: lấy lịch sử mua của user cụ thể
-        PageResponse<UserPurchasedItemResponse> data = userVariantService.getPurchasedByUser(userId, page, size);
+        // Admin: lấy lịch sử mua của user cụ thể từ PurchaseOrderEntity
+        PageResponse<UserPurchasedItemResponse> data = userVariantService.getPurchasedByUserId(userId, page, size);
         return ApiResponse.<PageResponse<UserPurchasedItemResponse>>builder()
                 .result(data)
                 .build();
@@ -158,6 +158,15 @@ public class ProductController {
     public ApiResponse<OrderDetailResponse> getOrderDetail(@PathVariable String userVariantId) {
         // Lấy chi tiết đơn hàng có address và payment từ userVariantId
         OrderDetailResponse data = userVariantService.getOrderDetail(userVariantId);
+        return ApiResponse.<OrderDetailResponse>builder()
+                .result(data)
+                .build();
+    }
+
+    @GetMapping("/order-detail/{purchaseId}")
+    public ApiResponse<OrderDetailResponse> getOrderDetailByPurchaseId(@PathVariable String purchaseId) {
+        // Lấy chi tiết đơn hàng và tất cả products từ purchaseId (orderId)
+        OrderDetailResponse data = userVariantService.getOrderDetailByPurchaseId(purchaseId);
         return ApiResponse.<OrderDetailResponse>builder()
                 .result(data)
                 .build();

@@ -11,13 +11,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @FeignClient(
         name = "auth-service",
-        contextId = "identityClient",
-        configuration = {AuthenticationRequestInterceptor.class}
+        contextId = "identityChatClient",
+        configuration = {}
 )
-public interface IdentityClient {
+public interface IdentityChatClient {
     @PostMapping("/auth/introspect")
     ApiResponse<IntrospectResponse> introspect(@RequestBody IntrospectRequest request);
-
-    @GetMapping("/auth/internal/admin")
-    ApiResponse<UserResponse> getAdmin();
 }

@@ -329,6 +329,110 @@ public class UserVariantService {
         return getPurchasedByUser(userId, page, size);
     }
 
+    public PageResponse<UserPurchasedItemResponse> getPurchasedByUserId(String userId, int page, int size) {
+        // Lấy tất cả PurchaseOrderEntity của user (không paginate ở đây)
+        List<PurchaseOrderEntity> orders = purchaseOrderRepository.findByUserId(userId);
+        
+        if (orders.isEmpty()) {
+            return new PageResponse<>(page, size, 0, 0, List.of());
+        }
+        
+        // Lấy tất cả orderIds
+        List<String> orderIds = orders.stream()
+                .map(PurchaseOrderEntity::getId)
+                .toList();
+        
+        // Lấy tất cả UserVariantEntity từ các orders
+        List<UserVariantEntity> allUserVariants = new ArrayList<>();
+        for (String orderId : orderIds) {
+            List<UserVariantEntity> userVariants = userVariantRepository.findByOrderId(orderId);
+            allUserVariants.addAll(userVariants);
+        }
+        
+        // Sort theo createdDate DESC
+        allUserVariants.sort((a, b) -> {
+            if (a.getCreatedDate() == null && b.getCreatedDate() == null) return 0;
+            if (a.getCreatedDate() == null) return 1;
+            if (b.getCreatedDate() == null) return -1;
+            return b.getCreatedDate().compareTo(a.getCreatedDate());
+        });
+        
+        // Batch load variant sizes
+        List<String> variantSizeIds = allUserVariants.stream()
+                .map(UserVariantEntity::getVariantSizeId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        
+        Map<String, VariantSizeEntity> variantSizeMap = variantSizeIds.isEmpty()
+                ? Map.of()
+                : variantSizeRepository.findAllById(variantSizeIds).stream()
+                .collect(Collectors.toMap(VariantSizeEntity::getId, Function.identity()));
+        
+        // Batch load variants
+        List<String> variantIds = variantSizeMap.values().stream()
+                .map(VariantSizeEntity::getVariantId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        
+        Map<String, VariantEntity> variantMap = variantIds.isEmpty()
+                ? Map.of()
+                : variantRepository.findAllById(variantIds).stream()
+                .collect(Collectors.toMap(VariantEntity::getId, Function.identity()));
+        
+        // Map to response (không load product)
+        List<UserPurchasedItemResponse> allItems = allUserVariants.stream()
+                .map(uv -> {
+                    VariantSizeEntity variantSize = variantSizeMap.get(uv.getVariantSizeId());
+                    if (variantSize == null) return null;
+                    
+                    VariantEntity variant = variantMap.get(variantSize.getVariantId());
+                    if (variant == null) return null;
+                    
+                    VariantResponse variantDto = VariantResponse.builder()
+                            .id(variantSize.getId())
+                            .productId(variant.getProductId())
+                            .color(variant.getColor())
+                            .status(variant.getStatus())
+                            .size(variantSize.getSize())
+                            .stock(variantSize.getStock())
+                            .countSell(variantSize.getCountSell())
+                            .build();
+                    
+                    return UserPurchasedItemResponse.builder()
+                            .id(uv.getId())
+                            .product(null) // Không lấy product
+                            .variant(variantDto)
+                            .countBuy(uv.getQuantity())
+                            .totalMoney(uv.getTotalPrice())
+                            .userId(uv.getUserId())
+                            .build();
+                })
+                .filter(Objects::nonNull)
+                .toList();
+        
+        // Pagination thủ công cho items
+        int totalElements = allItems.size();
+        int pageSize = Math.max(1, size);
+        int pageIndex = Math.max(0, page - 1);
+        int start = pageIndex * pageSize;
+        int end = Math.min(start + pageSize, totalElements);
+        List<UserPurchasedItemResponse> pagedItems = (start < totalElements) 
+                ? allItems.subList(start, end) 
+                : List.of();
+        
+        int totalPages = (int) Math.ceil((double) totalElements / pageSize);
+        
+        return new PageResponse<>(
+                page,
+                pageSize,
+                totalElements,
+                totalPages,
+                pagedItems
+        );
+    }
+
     public PageResponse<UserPurchasedItemResponse> getPurchasedByProductId(String productId, int page, int size) {
         if (productId == null || productId.isBlank()) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
@@ -517,6 +621,124 @@ public class UserVariantService {
                 .collect(Collectors.toMap(ProductEntity::getId, Function.identity()));
 
         // Map items
+        List<UserPurchasedItemResponse> items = userVariants.stream()
+                .map(uv -> {
+                    VariantSizeEntity variantSize = variantSizeMap.get(uv.getVariantSizeId());
+                    if (variantSize == null) return null;
+
+                    VariantEntity variant = variantMap.get(variantSize.getVariantId());
+                    if (variant == null) return null;
+
+                    ProductEntity product = productMap.get(variant.getProductId());
+                    if (product == null) return null;
+
+                    ProductGetResponse productDto = modelMapper.map(product, ProductGetResponse.class);
+
+                    VariantResponse variantDto = VariantResponse.builder()
+                            .id(variantSize.getId())
+                            .productId(variant.getProductId())
+                            .color(variant.getColor())
+                            .status(variant.getStatus())
+                            .size(variantSize.getSize())
+                            .stock(variantSize.getStock())
+                            .countSell(variantSize.getCountSell())
+                            .build();
+
+                    return UserPurchasedItemResponse.builder()
+                            .id(uv.getId())
+                            .product(productDto)
+                            .variant(variantDto)
+                            .countBuy(uv.getQuantity())
+                            .totalMoney(uv.getTotalPrice())
+                            .userId(uv.getUserId())
+                            .build();
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        // Batch load images for all products to optimize performance
+        Map<String, CloudinaryResponse> imageCache = batchLoadProductImages(
+                items.stream()
+                        .map(item -> item.getProduct() != null ? item.getProduct().getId() : null)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .collect(Collectors.toList())
+        );
+
+        // Set image URLs
+        items.forEach(item -> {
+            if (item.getProduct() != null && item.getProduct().getId() != null) {
+                item.getProduct().setImageUrl(imageCache.get(item.getProduct().getId()));
+            }
+        });
+
+        return OrderDetailResponse.builder()
+                .id(order.getId())
+                .userId(order.getUserId())
+                .totalPrice(order.getTotalPrice())
+                .finishPrice(order.getFinishPrice())
+                .couponCode(order.getCouponCode())
+                .discountPercent(order.getDiscountPercent())
+                .addressId(order.getAddressId())
+                .createdDate(order.getCreatedDate())
+                .modifiedDate(order.getModifiedDate())
+                .address(address)
+                .payment(payment)
+                .items(items)
+                .build();
+    }
+
+    public OrderDetailResponse getOrderDetailByPurchaseId(String purchaseId) {
+        String currentUserId = GetInfo.getLoggedInUserName();
+        boolean isAdmin = GetInfo.isAdmin();
+
+        // Lấy PurchaseOrderEntity
+        PurchaseOrderEntity order = purchaseOrderRepository.findById(purchaseId)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
+
+        // Kiểm tra quyền: user chỉ xem được order của mình, admin xem được tất cả
+        if (!isAdmin && !order.getUserId().equals(currentUserId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // Lấy address
+        UserAddress address = null;
+        if (order.getAddressId() != null) {
+            address = userAddressRepository.findById(order.getAddressId()).orElse(null);
+        }
+
+        // Lấy payment
+        PaymentEntity payment = paymentOrderRepository.findByOrderId(purchaseId).orElse(null);
+
+        // Lấy danh sách items (UserVariantEntity)
+        List<UserVariantEntity> userVariants = userVariantRepository.findByOrderId(purchaseId);
+
+        // Batch load để map items
+        List<String> variantSizeIds = userVariants.stream()
+                .map(UserVariantEntity::getVariantSizeId)
+                .distinct()
+                .toList();
+
+        Map<String, VariantSizeEntity> variantSizeMap = variantSizeRepository.findAllById(variantSizeIds).stream()
+                .collect(Collectors.toMap(VariantSizeEntity::getId, Function.identity()));
+
+        List<String> variantIds = variantSizeMap.values().stream()
+                .map(VariantSizeEntity::getVariantId)
+                .distinct()
+                .toList();
+
+        Map<String, VariantEntity> variantMap = variantRepository.findAllById(variantIds).stream()
+                .collect(Collectors.toMap(VariantEntity::getId, Function.identity()));
+
+        List<String> productIds = variantMap.values().stream()
+                .map(VariantEntity::getProductId)
+                .distinct()
+                .toList();
+
+        Map<String, ProductEntity> productMap = productRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(ProductEntity::getId, Function.identity()));
+
+        // Map items với đầy đủ product info
         List<UserPurchasedItemResponse> items = userVariants.stream()
                 .map(uv -> {
                     VariantSizeEntity variantSize = variantSizeMap.get(uv.getVariantSizeId());

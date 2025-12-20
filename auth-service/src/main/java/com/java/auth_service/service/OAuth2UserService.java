@@ -115,6 +115,7 @@ public class OAuth2UserService {
         UserEntity newUser = UserEntity.builder()
                 .email(email)
                 .password("")
+                .name(googleUser.getName())
                 .status(true)
                 .role(role)
                 .build();
