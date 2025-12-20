@@ -27,8 +27,6 @@ public class UserEntity extends BaseEntity {
 
     String phone;
 
-    String address;
-
     String email;
 
     @DBRef

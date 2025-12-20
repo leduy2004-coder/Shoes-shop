@@ -34,11 +34,13 @@ public class VariantController {
     }
     @GetMapping("/history")
     public ApiResponse<PageResponse<VariantHistoryResponse>> history(
-            @RequestParam(required = false)  String variantSizeId, // ID của VariantSizeEntity
+            @RequestParam(required = false) String variantSizeId, // ID của VariantSizeEntity
+            @RequestParam(required = false) String productId,      // ID của ProductEntity
+            @RequestParam(required = false) String variantId,       // ID của VariantEntity
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        PageResponse<VariantHistoryResponse> res = variantService.getHistory(variantSizeId, page, size);
+        PageResponse<VariantHistoryResponse> res = variantService.getHistory(variantSizeId, productId, variantId, page, size);
         return ApiResponse.<PageResponse<VariantHistoryResponse>>builder()
                 .result(res)
                 .build();
@@ -74,9 +76,9 @@ public class VariantController {
     }
 
     @PostMapping("/buy")
-    public ApiResponse<List<UserVariantResponse>> buyVariant(@RequestBody BuyVariantRequest request) {
-        List<UserVariantResponse> response = userVariantService.buyVariantWithCoupon(request);
-        return ApiResponse.<List<UserVariantResponse>>builder()
+    public ApiResponse<BuyVariantResponse> buyVariant(@RequestBody BuyVariantRequest request) {
+        BuyVariantResponse response = userVariantService.buyVariantWithCoupon(request);
+        return ApiResponse.<BuyVariantResponse>builder()
                 .result(response)
                 .build();
     }

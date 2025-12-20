@@ -46,7 +46,9 @@ public class FileService {
                     .url(url)
                     .build());
         } else if (imageType.equals(ImageType.PRODUCT)) {
-            isPrimary = primaryName.equals(file.getOriginalFilename());
+            if (primaryName != null){
+                isPrimary = primaryName.equals(file.getOriginalFilename());
+            }
             productRepository.save(ProductImageEntity.builder()
                     .productId(id)
                     .name(fileName)
@@ -170,6 +172,50 @@ public class FileService {
         }
         return false;
 
+    }
+
+    public Boolean updatePrimaryImage(String productId, String primaryName) {
+        if (productId == null || productId.isBlank() || primaryName == null || primaryName.isBlank()) {
+            return false;
+        }
+
+        // Lấy tất cả ảnh của product
+        List<ProductImageEntity> images = productRepository.findAllByProductId(productId);
+        if (images.isEmpty()) {
+            return false;
+        }
+
+        // Tìm ảnh có tên trùng với primaryName (cần extract tên gốc từ fileName)
+        ProductImageEntity targetImage = null;
+        for (ProductImageEntity img : images) {
+            // fileName có format: UUID_originalName, cần check originalName
+            String fileName = img.getName();
+            int underscoreIndex = fileName.indexOf('_');
+            if (underscoreIndex > 0 && underscoreIndex < fileName.length() - 1) {
+                String originalName = fileName.substring(underscoreIndex + 1);
+                if (primaryName.equals(originalName)) {
+                    // Nếu có nhiều ảnh cùng originalName, lấy ảnh mới nhất (theo createdDate)
+                    if (targetImage == null || img.getCreatedDate().isAfter(targetImage.getCreatedDate())) {
+                        targetImage = img;
+                    }
+                }
+            }
+        }
+
+        if (targetImage == null) {
+            return false;
+        }
+
+        // Set tất cả ảnh về false
+        images.forEach(img -> img.setPrimary(false));
+
+        // Set ảnh target thành true
+        targetImage.setPrimary(true);
+
+        // Lưu lại
+        productRepository.saveAll(images);
+
+        return true;
     }
 
 }

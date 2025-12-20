@@ -1,5 +1,6 @@
 package com.java.auth_service.service.impl;
 
+import com.java.auth_service.dto.PageResponse;
 import com.java.auth_service.dto.request.UserRequest;
 import com.java.auth_service.dto.request.UserUpdateRequest;
 import com.java.auth_service.dto.response.UserResponse;
@@ -11,15 +12,24 @@ import com.java.auth_service.repository.RoleRepository;
 import com.java.auth_service.repository.UserRepository;
 import com.java.auth_service.service.RoleService;
 import com.java.auth_service.service.UserService;
+import com.java.auth_service.utility.GetInfo;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -33,6 +43,7 @@ public class UserImpl implements UserService {
    RoleService roleService;
    PasswordEncoder passwordEncoder;
    RoleRepository roleRepository;
+   MongoTemplate mongoTemplate;
 
 
     @Override
@@ -97,11 +108,60 @@ public class UserImpl implements UserService {
         return mapUserEntitiesToResponses(list);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @Override
+    public PageResponse<UserResponse> findAllWithPagination(int page, int size, String name, String email) {
+        // Build criteria for search
+        List<Criteria> ands = new ArrayList<>();
+
+        if (name != null && !name.isBlank()) {
+            // Case-insensitive regex search for name
+            ands.add(Criteria.where("name").regex(name.trim(), "i"));
+        }
+
+        if (email != null && !email.isBlank()) {
+            // Case-insensitive regex search for email
+            ands.add(Criteria.where("email").regex(email.trim(), "i"));
+        }
+
+        Query query = new Query();
+        if (!ands.isEmpty()) {
+            query.addCriteria(new Criteria().andOperator(ands.toArray(Criteria[]::new)));
+        }
+
+        // Sort by createdDate descending
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdDate");
+        query.with(sort);
+
+        // Paging (controller 1-based)
+        int pageIndex = Math.max(0, page - 1);
+        int pageSize = Math.max(1, size);
+        query.skip((long) pageIndex * pageSize).limit(pageSize);
+
+        // Execute query
+        List<UserEntity> content = mongoTemplate.find(query, UserEntity.class);
+        long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), UserEntity.class);
+
+        // Map to response
+        List<UserResponse> items = mapUserEntitiesToResponses(content);
+
+        int totalPages = (int) Math.ceil((double) total / pageSize);
+
+        return new PageResponse<>(
+                page,
+                pageSize,
+                total,
+                totalPages,
+                items
+        );
+    }
+
     @Override
     public UserResponse updateUser(UserUpdateRequest userRequest) {
         UserEntity userEntity = userRepository.findById(userRequest.getId()).orElseThrow();
-        userEntity.setStatus(userRequest.getStatus());
-        userEntity.setAddress(userRequest.getAddress());
+        if (GetInfo.isAdmin() && userRequest.getStatus() != null){
+            userEntity.setStatus(userRequest.getStatus());
+        }
         userEntity.setPhone(userRequest.getPhone());
         userEntity.setName(userRequest.getName());
         UserEntity user = userRepository.save(userEntity);

@@ -4,6 +4,8 @@ import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.brand.BrandGetResponse;
 import com.java.shoes_service.dto.brand.BrandRequest;
 import com.java.shoes_service.entity.brand.BrandEntity;
+import com.java.shoes_service.exception.AppException;
+import com.java.shoes_service.exception.ErrorCode;
 import com.java.shoes_service.repository.BrandRepository;
 import com.java.shoes_service.repository.httpClient.FileClient;
 import com.java.shoes_service.repository.product.ProductRepository;
@@ -63,10 +65,10 @@ public class BrandService {
         String brandId = request.getId();
         
         // Nếu có id thì là update, không có thì là create
-        if (brandId != null && !brandId.isBlank() && brandRepository.existsById(brandId)) {
+        if (brandId != null) {
             // Update
             brand = brandRepository.findById(brandId)
-                    .orElseThrow(() -> new RuntimeException("Brand not found: " + brandId));
+                    .orElseThrow(() -> new AppException(ErrorCode.BRAND_NOT_FOUND));
             
             // Cập nhật thông tin
             if (request.getName() != null && !request.getName().isBlank()) {
@@ -78,21 +80,18 @@ public class BrandService {
                 var uploadResponse = fileClient.uploadMediaBrand(file, brandId).getResult();
                 brand.setLogo(uploadResponse.getUrl());
             }
-            // Nếu không có file thì giữ logo cũ (không làm gì)
-            
+
         } else {
             // Create
             brand = modelMapper.map(request, BrandEntity.class);
             brand = brandRepository.save(brand);
-            
             // Nếu có file thì upload logo
             if (file != null && !file.isEmpty()) {
                 var uploadResponse = fileClient.uploadMediaBrand(file, brand.getId()).getResult();
                 brand.setLogo(uploadResponse.getUrl());
-                brandRepository.save(brand);
             }
         }
-        
+        brand = brandRepository.save(brand);
         return mapToBrandGetResponse(brand);
     }
 

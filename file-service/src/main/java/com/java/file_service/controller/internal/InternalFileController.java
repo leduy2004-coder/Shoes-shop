@@ -75,5 +75,14 @@ public class InternalFileController {
                 .build();
     }
 
+    @PutMapping(value = "/product/update-primary")
+    public ApiResponse<Boolean> updatePrimaryImage(@RequestParam("productId") String productId,
+                                                   @RequestParam("primaryName") String primaryName) {
+        Boolean response = fileService.updatePrimaryImage(productId, primaryName);
+        return ApiResponse.<Boolean>builder()
+                .result(response)
+                .build();
+    }
+
 
 }

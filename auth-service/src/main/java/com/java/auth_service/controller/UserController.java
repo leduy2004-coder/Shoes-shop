@@ -2,6 +2,7 @@ package com.java.auth_service.controller;
 
 
 import com.java.auth_service.dto.ApiResponse;
+import com.java.auth_service.dto.PageResponse;
 import com.java.auth_service.dto.request.UserRequest;
 import com.java.auth_service.dto.request.UserUpdateRequest;
 import com.java.auth_service.dto.response.UserResponse;
@@ -24,6 +25,17 @@ public class UserController {
     public ApiResponse<List<UserResponse>> findAll() {
         List<UserResponse> list = userService.findAll();
         return ApiResponse.<List<UserResponse>>builder().result(list).build();
+    }
+
+    @GetMapping("/search")
+    public ApiResponse<PageResponse<UserResponse>> findAllWithPagination(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String email
+    ) {
+        PageResponse<UserResponse> response = userService.findAllWithPagination(page, size, name, email);
+        return ApiResponse.<PageResponse<UserResponse>>builder().result(response).build();
     }
 
     @GetMapping("/get-user")

@@ -5,7 +5,7 @@ import com.java.shoes_service.dto.dashboard.DashboardRequest;
 import com.java.shoes_service.dto.dashboard.DashboardResponse;
 import com.java.shoes_service.dto.dashboard.MonthlyRevenueDto;
 import com.java.shoes_service.dto.dashboard.RecentOrderDto;
-import com.java.shoes_service.entity.product.UserVariantEntity;
+import com.java.shoes_service.entity.order.UserVariantEntity;
 import com.java.shoes_service.repository.product.ProductRepository;
 import com.java.shoes_service.repository.product.UserVariantRepository;
 import lombok.AccessLevel;

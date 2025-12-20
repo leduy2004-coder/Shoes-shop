@@ -5,7 +5,9 @@ import com.java.shoes_service.dto.ApiResponse;
 import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.brand.BrandGetResponse;
 import com.java.shoes_service.dto.brand.BrandRequest;
+import com.java.shoes_service.dto.product.product.ProductGetResponse;
 import com.java.shoes_service.service.BrandService;
+import com.java.shoes_service.service.product.ProductService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -21,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/brands")
 public class BrandController {
     BrandService brandService;
+    ProductService productService;
 
     @GetMapping("/search")
     public ApiResponse<PageResponse<BrandGetResponse>> searchBrands(
@@ -45,6 +48,18 @@ public class BrandController {
     public ApiResponse<BrandGetResponse> getBrandById(@PathVariable String id) {
         BrandGetResponse response = brandService.getBrandById(id);
         return ApiResponse.<BrandGetResponse>builder()
+                .result(response)
+                .build();
+    }
+
+    @GetMapping("/{id}/products")
+    public ApiResponse<PageResponse<ProductGetResponse>> getProductsByBrandId(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        PageResponse<ProductGetResponse> response = productService.getProductsByBrandId(id, page, size);
+        return ApiResponse.<PageResponse<ProductGetResponse>>builder()
                 .result(response)
                 .build();
     }

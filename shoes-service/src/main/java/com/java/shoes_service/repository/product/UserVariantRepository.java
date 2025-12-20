@@ -1,5 +1,5 @@
 package com.java.shoes_service.repository.product;
-import com.java.shoes_service.entity.product.UserVariantEntity;
+import com.java.shoes_service.entity.order.UserVariantEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -18,4 +18,7 @@ public interface UserVariantRepository extends MongoRepository<UserVariantEntity
     
     List<UserVariantEntity> findByVariantSizeIdIn(List<String> variantSizeIds);
     Page<UserVariantEntity> findByVariantSizeIdIn(List<String> variantSizeIds, Pageable pageable);
+    
+    List<UserVariantEntity> findByOrderId(String orderId);
+
 }

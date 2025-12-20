@@ -176,7 +176,8 @@ services:
         condition: service_healthy
     restart: always
     ports:
-      - "8084:8084"
+      - "8084:8084"  # HTTP API port
+      - "8099:8099"  # Socket.IO port
     environment:
       - TZ=Asia/Tokyo
       - SPRING_CLOUD_CONFIG_URI=http://config-server:8888

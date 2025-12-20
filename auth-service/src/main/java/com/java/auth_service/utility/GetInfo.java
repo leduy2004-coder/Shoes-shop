@@ -24,4 +24,14 @@ public class GetInfo {
         }
         return null;
     }
+
+    public static boolean isAdmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+        // Lấy các quyền (roles) từ Authentication
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+    }
 }

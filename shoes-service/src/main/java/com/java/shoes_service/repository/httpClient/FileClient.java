@@ -40,5 +40,9 @@ public interface FileClient {
     ApiResponse<Boolean> deleteByNameImage(@RequestBody String nameImage,
                                                @RequestParam("type") ImageType type);
 
+    @PutMapping(value = "/file/internal/product/update-primary")
+    ApiResponse<Boolean> updatePrimaryImage(@RequestParam("productId") String productId,
+                                            @RequestParam("primaryName") String primaryName);
+
 }
 

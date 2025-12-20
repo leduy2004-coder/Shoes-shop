@@ -5,14 +5,13 @@ import com.java.ImageType;
 import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.product.product.*;
 import com.java.shoes_service.dto.product.variant.VariantGroupResponse;
-import com.java.shoes_service.dto.product.variant.VariantResponse;
 import com.java.shoes_service.entity.brand.BrandEntity;
 import com.java.shoes_service.entity.product.CategoryEntity;
 import com.java.shoes_service.entity.product.ProductEntity;
 import com.java.shoes_service.entity.product.VariantEntity;
 import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
-import com.java.shoes_service.repository.*;
+import com.java.shoes_service.repository.BrandRepository;
 import com.java.shoes_service.repository.httpClient.FileClient;
 import com.java.shoes_service.repository.product.CategoryRepository;
 import com.java.shoes_service.repository.product.HistoryProductRepository;
@@ -33,12 +32,11 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 
 @Service
@@ -83,6 +81,49 @@ public class ProductService {
         List<VariantGroupResponse> list = variantService.getVariantsGroupedByProductId(productId);
         List<CloudinaryResponse> listImage = fileClient.getImage(productId, ImageType.PRODUCT).getResult();
         return ProductGetDetailResponse.builder().product(productGetResponse).variants(list).listImg(listImage).build();
+    }
+
+    public PageResponse<ProductGetResponse> getProductsByBrandId(String brandId, int page, int size) {
+        if (brandId == null || brandId.isBlank()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // Validate brand exists
+        if (!brandRepository.existsById(brandId)) {
+            throw new AppException(ErrorCode.BRAND_NOT_FOUND);
+        }
+
+        // Build query with brandId filter
+        Query query = new Query();
+        query.addCriteria(Criteria.where("brand.id").is(brandId.trim()));
+
+        // Sort by createdDate descending
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdDate");
+        query.with(sort);
+
+        // Paging (controller 1-based)
+        int pageIndex = Math.max(0, page - 1);
+        int pageSize = Math.max(1, size);
+        query.skip((long) pageIndex * pageSize).limit(pageSize);
+
+        // Execute
+        List<ProductEntity> content = mongoTemplate.find(query, ProductEntity.class);
+        long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), ProductEntity.class);
+
+        // Map DTO
+        List<ProductGetResponse> items = content.stream()
+                .map(this::mapToProductGetResponse)
+                .toList();
+
+        int totalPages = (int) Math.ceil((double) total / pageSize);
+
+        return new PageResponse<>(
+                page,
+                pageSize,
+                total,
+                totalPages,
+                items
+        );
     }
 
     public PageResponse<ProductGetResponse> searchProducts(
@@ -162,7 +203,7 @@ public class ProductService {
         );
     }
 
-
+    @Transactional
     public ProductCreateResponse createProduct(ProductCreateRequest request, List<MultipartFile> files) {
         try {
             ProductEntity product = modelMapper.map(request, ProductEntity.class);
@@ -185,10 +226,27 @@ public class ProductService {
 
             String productId = entity.getId();
 
-            //upload images
+            // Validate: chỉ cho phép 1 ảnh primary
+            if (request.getPrimaryName() != null && !request.getPrimaryName().isBlank() && files != null && !files.isEmpty()) {
+                long primaryCount = files.stream()
+                        .filter(f -> f != null && !f.isEmpty() && request.getPrimaryName().equals(f.getOriginalFilename()))
+                        .count();
+                if (primaryCount > 1) {
+                    throw new AppException(ErrorCode.INVALID_REQUEST);
+                }
+                if (primaryCount == 0 && files.size() > 0) {
+                    // Nếu có files nhưng không có file nào trùng với primaryName, cảnh báo
+                    log.warn("No file matches primaryName '{}' for product {}", request.getPrimaryName(), productId);
+                }
+            }
+
+            // Upload images
             List<CloudinaryResponse> imgUrls = (files == null ? List.<MultipartFile>of() : files).stream()
                     .map(file -> fileClient.uploadMediaProduct(file, productId, request.getPrimaryName()).getResult())
                     .toList();
+
+            // Đảm bảo chỉ có 1 ảnh primary sau khi upload
+            ensureOnlyOnePrimary(productId);
 
             ProductCreateResponse response = modelMapper.map(entity, ProductCreateResponse.class);
             response.setImgUrls(imgUrls);
@@ -240,6 +298,7 @@ public class ProductService {
                 .build();
     }
 
+    @Transactional
     public List<CloudinaryResponse> updateImageProduct(ProductUpdateImageRequest request,
                                                        List<MultipartFile> files) {
 
@@ -261,14 +320,24 @@ public class ProductService {
             }
         }
 
-        // 2) Upload ảnh mới (nếu có)
+        // 2) Upload ảnh mới (nếu có) - KHÔNG set primary ở đây, sẽ set sau
         if (files != null && !files.isEmpty()) {
             for (MultipartFile f : files) {
                 if (f != null && !f.isEmpty()) {
-                    fileClient.uploadMediaProduct(f, request.getProductId(),request.getPrimaryName());
+                    // Upload không truyền primaryName, sẽ set primary sau
+                    fileClient.uploadMediaProduct(f, request.getProductId(), null);
                 }
             }
         }
+
+        // 3) Update primary (nếu có primaryName) - LÀM CUỐI CÙNG
+        if (request.getPrimaryName() != null && !request.getPrimaryName().isBlank()) {
+            Boolean updated = fileClient.updatePrimaryImage(request.getProductId(), request.getPrimaryName()).getResult();
+            if (Boolean.FALSE.equals(updated)) {
+                throw new AppException(ErrorCode.INVALID_REQUEST);
+            }
+        }
+
         return fileClient.getImage(request.getProductId(), ImageType.PRODUCT).getResult();
     }
 
@@ -336,6 +405,26 @@ public class ProductService {
         return response;
     }
 
+
+    /**
+     * Đảm bảo chỉ có 1 ảnh primary cho product
+     * Kiểm tra và log warning nếu có nhiều hơn 1 primary
+     */
+    private void ensureOnlyOnePrimary(String productId) {
+        try {
+            List<CloudinaryResponse> images = fileClient.getImage(productId, ImageType.PRODUCT).getResult();
+            if (images != null) {
+                long primaryCount = images.stream()
+                        .filter(img -> img != null && Boolean.TRUE.equals(img.getIsPrimary()))
+                        .count();
+                if (primaryCount > 1) {
+                    log.warn("Product {} has {} primary images. Only 1 primary image is allowed.", productId, primaryCount);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not check primary images for product {}: {}", productId, e.getMessage());
+        }
+    }
 
     private Sort resolveSort(String sortBy, String sortOrder) {
         String field = (sortBy == null || sortBy.isBlank()) ? "createdDate" : sortBy.trim();

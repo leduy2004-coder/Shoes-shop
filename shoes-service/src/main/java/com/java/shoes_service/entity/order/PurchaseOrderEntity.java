@@ -28,4 +28,3 @@ public class PurchaseOrderEntity extends BaseEntity {
     Integer discountPercent; // Phần trăm giảm giá từ coupon (nếu có)
     String addressId; // Địa chỉ giao hàng
 }
-

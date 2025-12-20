@@ -15,6 +15,5 @@ public class UserUpdateRequest {
     String id;
     String name;
     String phone;
-    String address;
     Boolean status;
 }

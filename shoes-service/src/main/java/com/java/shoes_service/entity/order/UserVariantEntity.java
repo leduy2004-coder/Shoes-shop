@@ -1,4 +1,4 @@
-package com.java.shoes_service.entity.product;
+package com.java.shoes_service.entity.order;
 
 import com.java.shoes_service.entity.common.BaseEntity;
 import lombok.*;
@@ -17,5 +17,5 @@ public class UserVariantEntity extends BaseEntity {
     String variantSizeId;
     long quantity;
     Double totalPrice;
-    String addressId; // Địa chỉ giao hàng
+    String orderId;
 }

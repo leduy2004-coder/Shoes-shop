@@ -289,17 +289,68 @@ public class VariantService {
                 .toList();
     }
 
-    public PageResponse<VariantHistoryResponse> getHistory(String variantSizeId, int page, int size) {
+    public PageResponse<VariantHistoryResponse> getHistory(String variantSizeId, String productId, String variantId, int page, int size) {
         Pageable pageable = PageRequest.of(
                 Math.max(0, page - 1),
                 Math.max(1, size),
                 Sort.by(Sort.Direction.DESC, "createdDate")
         );
 
-        // variantSizeId là ID của VariantSizeEntity
-        Page<HistoryProductEntity> p = (variantSizeId == null || variantSizeId.isBlank())
-                ? historyProductRepository.findAll(pageable)
-                : historyProductRepository.findByVariantSizeId(variantSizeId, pageable);
+        // Xác định danh sách variantSizeIds để tìm kiếm
+        List<String> targetVariantSizeIds = null;
+
+        if (variantSizeId != null && !variantSizeId.isBlank()) {
+            // Ưu tiên variantSizeId nếu có
+            targetVariantSizeIds = List.of(variantSizeId.trim());
+        } else if (variantId != null && !variantId.isBlank()) {
+            // Tìm theo variantId: lấy tất cả variantSizes của variant này
+            List<VariantSizeEntity> variantSizes = variantSizeRepository.findByVariantId(variantId.trim());
+            targetVariantSizeIds = variantSizes.stream()
+                    .map(VariantSizeEntity::getId)
+                    .toList();
+        } else if (productId != null && !productId.isBlank()) {
+            // Tìm theo productId: lấy tất cả variants của product -> lấy tất cả variantSizes
+            List<VariantEntity> variants = variantRepository.findByProductId(productId.trim());
+            if (!variants.isEmpty()) {
+                List<String> variantIds = variants.stream()
+                        .map(VariantEntity::getId)
+                        .toList();
+                List<VariantSizeEntity> variantSizes = variantSizeRepository.findByVariantIdIn(variantIds);
+                targetVariantSizeIds = variantSizes.stream()
+                        .map(VariantSizeEntity::getId)
+                        .toList();
+            }
+        }
+
+        // Query history
+        Page<HistoryProductEntity> p;
+        if (targetVariantSizeIds == null || targetVariantSizeIds.isEmpty()) {
+            // Không có filter, lấy tất cả
+            p = historyProductRepository.findAll(pageable);
+        } else {
+            // Lấy history theo danh sách variantSizeIds
+            List<HistoryProductEntity> allHistories = historyProductRepository.findAllByVariantSizeIdIn(targetVariantSizeIds);
+            
+            // Manual pagination
+            int start = (int) pageable.getOffset();
+            int end = Math.min(start + pageable.getPageSize(), allHistories.size());
+            List<HistoryProductEntity> paginatedContent = allHistories.stream()
+                    .sorted((a, b) -> {
+                        if (a.getCreatedDate() == null && b.getCreatedDate() == null) return 0;
+                        if (a.getCreatedDate() == null) return 1;
+                        if (b.getCreatedDate() == null) return -1;
+                        return b.getCreatedDate().compareTo(a.getCreatedDate()); // DESC
+                    })
+                    .skip(start)
+                    .limit(pageable.getPageSize())
+                    .toList();
+            
+            p = new org.springframework.data.domain.PageImpl<>(
+                    paginatedContent,
+                    pageable,
+                    allHistories.size()
+            );
+        }
 
         // --- Batch load VariantSizeEntity ---
         List<String> variantSizeIds = p.getContent().stream()

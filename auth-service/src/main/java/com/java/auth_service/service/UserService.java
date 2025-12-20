@@ -1,5 +1,6 @@
 package com.java.auth_service.service;
 
+import com.java.auth_service.dto.PageResponse;
 import com.java.auth_service.dto.request.UserRequest;
 import com.java.auth_service.dto.request.UserUpdateRequest;
 import com.java.auth_service.dto.response.UserResponse;
@@ -13,6 +14,7 @@ public interface UserService {
     UserResponse findById(String id);
     UserResponse addUser(UserRequest userDto);
     List<UserResponse> findAll();
+    PageResponse<UserResponse> findAllWithPagination(int page, int size, String name, String email);
     UserResponse findAdmin();
     UserResponse updateUser(UserUpdateRequest userRequest);
 }

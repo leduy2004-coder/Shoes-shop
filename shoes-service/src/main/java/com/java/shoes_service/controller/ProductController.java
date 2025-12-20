@@ -4,6 +4,7 @@ package com.java.shoes_service.controller;
 import com.java.CloudinaryResponse;
 import com.java.shoes_service.dto.ApiResponse;
 import com.java.shoes_service.dto.PageResponse;
+import com.java.shoes_service.dto.product.product.OrderDetailResponse;
 import com.java.shoes_service.dto.product.product.*;
 
 import com.java.shoes_service.service.product.ProductService;
@@ -127,7 +128,7 @@ public class ProductController {
 
     @GetMapping("/purchased/by-product/{productId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<PageResponse<UserPurchasedItemResponse>> getPurchasedByProductId(
+    public ApiResponse<PageResponse<UserPurchasedItemResponse>> getPurchasedByProduct(
             @PathVariable String productId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
@@ -149,6 +150,15 @@ public class ProductController {
         // Admin: lấy lịch sử mua của user cụ thể
         PageResponse<UserPurchasedItemResponse> data = userVariantService.getPurchasedByUser(userId, page, size);
         return ApiResponse.<PageResponse<UserPurchasedItemResponse>>builder()
+                .result(data)
+                .build();
+    }
+
+    @GetMapping("/order/{userVariantId}")
+    public ApiResponse<OrderDetailResponse> getOrderDetail(@PathVariable String userVariantId) {
+        // Lấy chi tiết đơn hàng có address và payment từ userVariantId
+        OrderDetailResponse data = userVariantService.getOrderDetail(userVariantId);
+        return ApiResponse.<OrderDetailResponse>builder()
                 .result(data)
                 .build();
     }

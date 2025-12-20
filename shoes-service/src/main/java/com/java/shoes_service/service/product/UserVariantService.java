@@ -1,30 +1,31 @@
 package com.java.shoes_service.service.product;
 
 
+import com.java.CloudinaryResponse;
+import com.java.ImageType;
+import com.java.ProfileGetResponse;
 import com.java.shoes_service.dto.PageResponse;
+import com.java.shoes_service.dto.product.product.OrderDetailResponse;
 import com.java.shoes_service.dto.product.product.ProductGetResponse;
 import com.java.shoes_service.dto.product.product.UserPurchasedItemResponse;
-import com.java.shoes_service.dto.product.variant.BuyVariantRequest;
-import com.java.shoes_service.dto.product.variant.UserVariantRequest;
-import com.java.shoes_service.dto.product.variant.UserVariantResponse;
-import com.java.shoes_service.dto.product.variant.VariantResponse;
+import com.java.shoes_service.dto.product.variant.*;
 import com.java.shoes_service.entity.order.PurchaseOrderEntity;
+import com.java.shoes_service.entity.order.UserVariantEntity;
+import com.java.shoes_service.entity.payment.PaymentEntity;
+import com.java.shoes_service.entity.product.HistoryProductEntity;
 import com.java.shoes_service.entity.product.ProductEntity;
-import com.java.shoes_service.entity.product.UserVariantEntity;
 import com.java.shoes_service.entity.product.VariantEntity;
 import com.java.shoes_service.entity.product.VariantSizeEntity;
 import com.java.shoes_service.entity.promotion.CouponEntity;
 import com.java.shoes_service.entity.shipping.UserAddress;
 import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
-import com.java.shoes_service.entity.product.HistoryProductEntity;
 import com.java.shoes_service.repository.UserAddressRepository;
+import com.java.shoes_service.repository.httpClient.FileClient;
+import com.java.shoes_service.repository.httpClient.ProfileClient;
 import com.java.shoes_service.repository.order.PurchaseOrderRepository;
-import com.java.shoes_service.repository.product.HistoryProductRepository;
-import com.java.shoes_service.repository.product.ProductRepository;
-import com.java.shoes_service.repository.product.UserVariantRepository;
-import com.java.shoes_service.repository.product.VariantRepository;
-import com.java.shoes_service.repository.product.VariantSizeRepository;
+import com.java.shoes_service.repository.payment.PaymentOrderRepository;
+import com.java.shoes_service.repository.product.*;
 import com.java.shoes_service.repository.promotion.CouponRepository;
 import com.java.shoes_service.utility.GetInfo;
 import lombok.AccessLevel;
@@ -44,6 +45,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -57,13 +60,16 @@ public class UserVariantService {
     ProductRepository productRepository;
     UserVariantRepository userVariantRepository;
     PurchaseOrderRepository purchaseOrderRepository;
+    PaymentOrderRepository paymentOrderRepository;
     CouponRepository couponRepository;
     HistoryProductRepository historyProductRepository;
     UserAddressRepository userAddressRepository;
+    ProfileClient profileClient;
+    FileClient fileClient;
     ModelMapper modelMapper;
 
     @Transactional
-    public List<UserVariantResponse> buyVariantWithCoupon(BuyVariantRequest request) {
+    public BuyVariantResponse buyVariantWithCoupon(BuyVariantRequest request) {
         if (request == null || request.getItems() == null || request.getItems().isEmpty()) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
@@ -152,7 +158,20 @@ public class UserVariantService {
 
         // 5. Xử lý từng variant và lưu UserVariantEntity
         List<UserVariantResponse> responses = new ArrayList<>();
-        
+
+        // 7. Lưu PurchaseOrderEntity (variantIds giờ là variantSizeIds)
+        PurchaseOrderEntity purchaseOrder = PurchaseOrderEntity.builder()
+                .userId(userId)
+                .variantIds(variantSizeIds) // Lưu variantSizeIds
+                .totalPrice(totalPrice)
+                .finishPrice(finishPrice)
+                .couponCode(couponCode)
+                .discountPercent(discountPercent)
+                .addressId(addressId) // Lưu addressId
+                .build();
+
+        purchaseOrder = purchaseOrderRepository.save(purchaseOrder);
+
         for (UserVariantRequest item : items) {
             VariantSizeEntity variantSize = variantSizeRepository.findById(item.getVariantSizeId())
                     .orElseThrow(() -> new AppException(ErrorCode.VARIANT_NOT_FOUND));
@@ -199,17 +218,17 @@ public class UserVariantService {
             // Lưu UserVariantEntity (variantId giờ là variantSizeId)
             UserVariantEntity userVariant = UserVariantEntity.builder()
                     .userId(userId)
-                    .variantSizeId(variantSize.getId()) // Lưu variantSizeId
+                    .orderId(purchaseOrder.getId())
+                    .variantSizeId(variantSize.getId())
                     .quantity(quantity)
                     .totalPrice(itemPrice)
-                    .addressId(addressId) // Lưu addressId
                     .build();
             
             userVariant = userVariantRepository.save(userVariant);
             
             responses.add(UserVariantResponse.builder()
                     .id(userVariant.getId())
-                    .variantId(userVariant.getVariantSizeId()) // variantId trong response là variantSizeId
+                    .variantId(userVariant.getVariantSizeId())
                     .quantity(userVariant.getQuantity())
                     .totalMoney(userVariant.getTotalPrice())
                     .build());
@@ -220,21 +239,7 @@ public class UserVariantService {
             coupon.setQuantity(coupon.getQuantity() - 1);
             couponRepository.save(coupon);
         }
-
-        // 7. Lưu PurchaseOrderEntity (variantIds giờ là variantSizeIds)
-        PurchaseOrderEntity purchaseOrder = PurchaseOrderEntity.builder()
-                .userId(userId)
-                .variantIds(variantSizeIds) // Lưu variantSizeIds
-                .totalPrice(totalPrice)
-                .finishPrice(finishPrice)
-                .couponCode(couponCode)
-                .discountPercent(discountPercent)
-                .addressId(addressId) // Lưu addressId
-                .build();
-        
-        purchaseOrderRepository.save(purchaseOrder);
-
-        return responses;
+        return BuyVariantResponse.builder().items(responses).orderId(purchaseOrder.getId()).build();
     }
 
     public PageResponse<UserPurchasedItemResponse> getPurchasedByUser(String userId, int page, int size) {
@@ -242,22 +247,10 @@ public class UserVariantService {
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), sort);
         
         Page<UserVariantEntity> userVariantsPage = userVariantRepository.findByUserId(userId, pageable);
-        
-        // Lấy tất cả addressIds để batch load
-        List<String> addressIds = userVariantsPage.getContent().stream()
-                .map(UserVariantEntity::getAddressId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        
-        Map<String, UserAddress> addressMap = addressIds.isEmpty() 
-                ? Map.of()
-                : userAddressRepository.findAllById(addressIds).stream()
-                        .collect(Collectors.toMap(UserAddress::getId, addr -> addr));
+        List<UserVariantEntity> userVariants = userVariantsPage.getContent();
 
-        List<UserPurchasedItemResponse> items = userVariantsPage.getContent().stream()
+        List<UserPurchasedItemResponse> items = userVariants.stream()
                 .map(uv -> {
-                    // uv.getVariantId() giờ là variantSizeId
                     VariantSizeEntity variantSize = variantSizeRepository.findById(uv.getVariantSizeId())
                             .orElse(null);
                     if (variantSize == null) {
@@ -291,22 +284,33 @@ public class UserVariantService {
                             .countSell(variantSize.getCountSell())
                             .build();
 
-                    // Lấy address từ addressId
-                    UserAddress address = uv.getAddressId() != null 
-                            ? addressMap.get(uv.getAddressId()) 
-                            : null;
-
                     return UserPurchasedItemResponse.builder()
+                            .id(uv.getId())
                             .product(productDto)
                             .variant(variantDto)
                             .countBuy(uv.getQuantity())
                             .totalMoney(uv.getTotalPrice())
-                            .userId(uv.getUserId()) // Thêm userId để admin biết ai mua
-                            .address(address) // Thêm address
+                            .userId(uv.getUserId())
                             .build();
                 })
                 .filter(Objects::nonNull)
                 .toList();
+
+        // Batch load images for all products to optimize performance
+        Map<String, CloudinaryResponse> imageCache = batchLoadProductImages(
+                items.stream()
+                        .map(item -> item.getProduct() != null ? item.getProduct().getId() : null)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .collect(Collectors.toList())
+        );
+
+        // Set image URLs
+        items.forEach(item -> {
+            if (item.getProduct() != null && item.getProduct().getId() != null) {
+                item.getProduct().setImageUrl(imageCache.get(item.getProduct().getId()));
+            }
+        });
 
         return new PageResponse<>(
                 page,
@@ -358,27 +362,36 @@ public class UserVariantService {
         Sort sort = Sort.by(Sort.Direction.DESC, "createdDate");
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), sort);
         Page<UserVariantEntity> userVariantsPage = userVariantRepository.findByVariantSizeIdIn(variantSizeIds, pageable);
+        List<UserVariantEntity> userVariants = userVariantsPage.getContent();
 
-        // Lấy tất cả addressIds để batch load
-        List<String> addressIds = userVariantsPage.getContent().stream()
-                .map(UserVariantEntity::getAddressId)
+        // Batch load user profiles
+        List<String> userIds = userVariants.stream()
+                .map(UserVariantEntity::getUserId)
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
-        
-        Map<String, UserAddress> addressMap = addressIds.isEmpty() 
-                ? Map.of()
-                : userAddressRepository.findAllById(addressIds).stream()
-                        .collect(Collectors.toMap(UserAddress::getId, addr -> addr));
+
+        Map<String, ProfileGetResponse> userMap = userIds.stream()
+                .collect(Collectors.toMap(
+                        Function.identity(),
+                        userId -> {
+                            try {
+                                return profileClient.getProfile(userId).getResult();
+                            } catch (Exception e) {
+                                log.warn("Could not fetch profile for userId: {}", userId, e);
+                                return null;
+                            }
+                        }
+                ));
 
         // Map sang response
         Map<String, VariantSizeEntity> variantSizeMap = variantSizes.stream()
-                .collect(Collectors.toMap(VariantSizeEntity::getId, vs -> vs));
+                .collect(Collectors.toMap(VariantSizeEntity::getId, Function.identity()));
 
         Map<String, VariantEntity> variantMap = variants.stream()
-                .collect(Collectors.toMap(VariantEntity::getId, v -> v));
+                .collect(Collectors.toMap(VariantEntity::getId, Function.identity()));
 
-        List<UserPurchasedItemResponse> items = userVariantsPage.getContent().stream()
+        List<UserPurchasedItemResponse> items = userVariants.stream()
                 .map(uv -> {
                     VariantSizeEntity variantSize = variantSizeMap.get(uv.getVariantSizeId());
                     if (variantSize == null) return null;
@@ -402,22 +415,37 @@ public class UserVariantService {
                             .countSell(variantSize.getCountSell())
                             .build();
 
-                    // Lấy address từ addressId
-                    UserAddress address = uv.getAddressId() != null 
-                            ? addressMap.get(uv.getAddressId()) 
-                            : null;
+                    // Lấy thông tin user
+                    ProfileGetResponse user = userMap.get(uv.getUserId());
 
                     return UserPurchasedItemResponse.builder()
+                            .id(uv.getId())
                             .product(productDto)
                             .variant(variantDto)
                             .countBuy(uv.getQuantity())
                             .totalMoney(uv.getTotalPrice())
                             .userId(uv.getUserId())
-                            .address(address) // Thêm address
+                            .user(user)
                             .build();
                 })
                 .filter(Objects::nonNull)
                 .toList();
+
+        // Batch load images for all products to optimize performance
+        Map<String, CloudinaryResponse> imageCache = batchLoadProductImages(
+                items.stream()
+                        .map(item -> item.getProduct() != null ? item.getProduct().getId() : null)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .collect(Collectors.toList())
+        );
+
+        // Set image URLs
+        items.forEach(item -> {
+            if (item.getProduct() != null && item.getProduct().getId() != null) {
+                item.getProduct().setImageUrl(imageCache.get(item.getProduct().getId()));
+            }
+        });
 
         return new PageResponse<>(
                 page,
@@ -428,10 +456,134 @@ public class UserVariantService {
         );
     }
 
-    /**
-     * Tính giá sau giảm giá theo product discount
-     * Tự động get product và tính giá hiệu quả
-     */
+    public OrderDetailResponse getOrderDetail(String userVariantId) {
+        String currentUserId = GetInfo.getLoggedInUserName();
+        boolean isAdmin = GetInfo.isAdmin();
+
+        // Lấy UserVariantEntity từ userVariantId
+        UserVariantEntity userVariant = userVariantRepository.findById(userVariantId)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
+
+        // Kiểm tra quyền: user chỉ xem được order của mình, admin xem được tất cả
+        if (!isAdmin && !userVariant.getUserId().equals(currentUserId)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // Lấy orderId từ UserVariantEntity
+        String orderId = userVariant.getOrderId();
+        if (orderId == null || orderId.isBlank()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        // Lấy PurchaseOrderEntity
+        PurchaseOrderEntity order = purchaseOrderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
+
+        // Lấy address
+        UserAddress address = null;
+        if (order.getAddressId() != null) {
+            address = userAddressRepository.findById(order.getAddressId()).orElse(null);
+        }
+
+        // Lấy payment
+        PaymentEntity payment = paymentOrderRepository.findByOrderId(orderId).orElse(null);
+
+        // Lấy danh sách items (UserVariantEntity)
+        List<UserVariantEntity> userVariants = userVariantRepository.findByOrderId(orderId);
+
+        // Batch load để map items
+        List<String> variantSizeIds = userVariants.stream()
+                .map(UserVariantEntity::getVariantSizeId)
+                .distinct()
+                .toList();
+
+        Map<String, VariantSizeEntity> variantSizeMap = variantSizeRepository.findAllById(variantSizeIds).stream()
+                .collect(Collectors.toMap(VariantSizeEntity::getId, Function.identity()));
+
+        List<String> variantIds = variantSizeMap.values().stream()
+                .map(VariantSizeEntity::getVariantId)
+                .distinct()
+                .toList();
+
+        Map<String, VariantEntity> variantMap = variantRepository.findAllById(variantIds).stream()
+                .collect(Collectors.toMap(VariantEntity::getId, Function.identity()));
+
+        List<String> productIds = variantMap.values().stream()
+                .map(VariantEntity::getProductId)
+                .distinct()
+                .toList();
+
+        Map<String, ProductEntity> productMap = productRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(ProductEntity::getId, Function.identity()));
+
+        // Map items
+        List<UserPurchasedItemResponse> items = userVariants.stream()
+                .map(uv -> {
+                    VariantSizeEntity variantSize = variantSizeMap.get(uv.getVariantSizeId());
+                    if (variantSize == null) return null;
+
+                    VariantEntity variant = variantMap.get(variantSize.getVariantId());
+                    if (variant == null) return null;
+
+                    ProductEntity product = productMap.get(variant.getProductId());
+                    if (product == null) return null;
+
+                    ProductGetResponse productDto = modelMapper.map(product, ProductGetResponse.class);
+
+                    VariantResponse variantDto = VariantResponse.builder()
+                            .id(variantSize.getId())
+                            .productId(variant.getProductId())
+                            .color(variant.getColor())
+                            .status(variant.getStatus())
+                            .size(variantSize.getSize())
+                            .stock(variantSize.getStock())
+                            .countSell(variantSize.getCountSell())
+                            .build();
+
+                    return UserPurchasedItemResponse.builder()
+                            .id(uv.getId())
+                            .product(productDto)
+                            .variant(variantDto)
+                            .countBuy(uv.getQuantity())
+                            .totalMoney(uv.getTotalPrice())
+                            .userId(uv.getUserId())
+                            .build();
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        // Batch load images for all products to optimize performance
+        Map<String, CloudinaryResponse> imageCache = batchLoadProductImages(
+                items.stream()
+                        .map(item -> item.getProduct() != null ? item.getProduct().getId() : null)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .collect(Collectors.toList())
+        );
+
+        // Set image URLs
+        items.forEach(item -> {
+            if (item.getProduct() != null && item.getProduct().getId() != null) {
+                item.getProduct().setImageUrl(imageCache.get(item.getProduct().getId()));
+            }
+        });
+
+        return OrderDetailResponse.builder()
+                .id(order.getId())
+                .userId(order.getUserId())
+                .totalPrice(order.getTotalPrice())
+                .finishPrice(order.getFinishPrice())
+                .couponCode(order.getCouponCode())
+                .discountPercent(order.getDiscountPercent())
+                .addressId(order.getAddressId())
+                .createdDate(order.getCreatedDate())
+                .modifiedDate(order.getModifiedDate())
+                .address(address)
+                .payment(payment)
+                .items(items)
+                .build();
+    }
+
     private double calculateEffectivePrice(ProductEntity product) {
         if (product == null) {
             throw new AppException(ErrorCode.PRODUCT_NOT_EXISTED);
@@ -445,5 +597,39 @@ public class UserVariantService {
         
         // Tính giá sau giảm giá
         return productPrice * (1 - discount / 100.0);
+    }
+
+    /**
+     * Batch load product images to optimize performance and reduce delay
+     * Loads primary images for multiple products at once using parallel processing
+     */
+    private Map<String, CloudinaryResponse> batchLoadProductImages(List<String> productIds) {
+        Map<String, CloudinaryResponse> imageCache = new ConcurrentHashMap<>();
+        
+        if (productIds == null || productIds.isEmpty()) {
+            return imageCache;
+        }
+
+        // Load images in parallel to reduce delay
+        productIds.parallelStream().forEach(productId -> {
+            try {
+                var apiRes = fileClient.getImage(productId, ImageType.PRODUCT);
+                var images = (apiRes != null) ? apiRes.getResult() : null;
+                if (images != null && !images.isEmpty()) {
+                    // Get primary image or first image
+                    CloudinaryResponse primaryImage = images.stream()
+                            .filter(img -> img != null && Boolean.TRUE.equals(img.getIsPrimary()))
+                            .findFirst()
+                            .orElse(images.get(0));
+                    if (primaryImage != null) {
+                        imageCache.put(productId, primaryImage);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch image for productId: {}", productId, e);
+            }
+        });
+
+        return imageCache;
     }
 }
