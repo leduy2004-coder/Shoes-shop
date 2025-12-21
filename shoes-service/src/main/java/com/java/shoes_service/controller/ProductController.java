@@ -115,13 +115,13 @@ public class ProductController {
     }
 
     @GetMapping("/purchased")
-    public ApiResponse<PageResponse<UserPurchasedItemResponse>> getPurchasedByUser(
+    public ApiResponse<PageResponse<UserPurchasedOrderResponse>> getPurchasedByUser(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         // User thường: tự động lấy userId từ token
-        PageResponse<UserPurchasedItemResponse> data = userVariantService.getPurchasedByUserFromToken(page, size);
-        return ApiResponse.<PageResponse<UserPurchasedItemResponse>>builder()
+        PageResponse<UserPurchasedOrderResponse> data = userVariantService.getPurchasedByUserFromToken(page, size);
+        return ApiResponse.<PageResponse<UserPurchasedOrderResponse>>builder()
                 .result(data)
                 .build();
     }
@@ -142,14 +142,14 @@ public class ProductController {
 
     @GetMapping("/purchased/by-user/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<PageResponse<UserPurchasedItemResponse>> getPurchasedByUserId(
+    public ApiResponse<PageResponse<UserOrderResponse>> getPurchasedByUserId(
             @PathVariable String userId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         // Admin: lấy lịch sử mua của user cụ thể từ PurchaseOrderEntity
-        PageResponse<UserPurchasedItemResponse> data = userVariantService.getPurchasedByUserId(userId, page, size);
-        return ApiResponse.<PageResponse<UserPurchasedItemResponse>>builder()
+        PageResponse<UserOrderResponse> data = userVariantService.getPurchasedByUserId(userId, page, size);
+        return ApiResponse.<PageResponse<UserOrderResponse>>builder()
                 .result(data)
                 .build();
     }

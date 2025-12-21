@@ -5,9 +5,12 @@ import com.java.CloudinaryResponse;
 import com.java.ImageType;
 import com.java.ProfileGetResponse;
 import com.java.shoes_service.dto.PageResponse;
+import com.java.shoes_service.dto.product.product.ItemOrderResponse;
 import com.java.shoes_service.dto.product.product.OrderDetailResponse;
 import com.java.shoes_service.dto.product.product.ProductGetResponse;
+import com.java.shoes_service.dto.product.product.UserOrderResponse;
 import com.java.shoes_service.dto.product.product.UserPurchasedItemResponse;
+import com.java.shoes_service.dto.product.product.UserPurchasedOrderResponse;
 import com.java.shoes_service.dto.product.variant.*;
 import com.java.shoes_service.entity.order.PurchaseOrderEntity;
 import com.java.shoes_service.entity.order.UserVariantEntity;
@@ -321,17 +324,169 @@ public class UserVariantService {
         );
     }
 
-    public PageResponse<UserPurchasedItemResponse> getPurchasedByUserFromToken(int page, int size) {
+    public PageResponse<UserPurchasedOrderResponse> getPurchasedByUserFromToken(int page, int size) {
         String userId = GetInfo.getLoggedInUserName();
         if (userId == null) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
-        return getPurchasedByUser(userId, page, size);
+        return getPurchasedOrdersByUser(userId, page, size);
     }
 
-    public PageResponse<UserPurchasedItemResponse> getPurchasedByUserId(String userId, int page, int size) {
-        // Lấy tất cả PurchaseOrderEntity của user (không paginate ở đây)
-        List<PurchaseOrderEntity> orders = purchaseOrderRepository.findByUserId(userId);
+    public PageResponse<UserPurchasedOrderResponse> getPurchasedOrdersByUser(String userId, int page, int size) {
+        // Phân trang PurchaseOrderEntity của user
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdDate");
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), sort);
+        Page<PurchaseOrderEntity> ordersPage = purchaseOrderRepository.findByUserId(userId, pageable);
+        List<PurchaseOrderEntity> orders = ordersPage.getContent();
+
+        if (orders.isEmpty()) {
+            return new PageResponse<>(page, size, 0, 0, List.of());
+        }
+
+        // Lấy tất cả orderIds
+        List<String> orderIds = orders.stream()
+                .map(PurchaseOrderEntity::getId)
+                .toList();
+
+        // Lấy tất cả UserVariantEntity từ các orders
+        Map<String, List<UserVariantEntity>> orderItemsMap = new java.util.HashMap<>();
+        for (String orderId : orderIds) {
+            List<UserVariantEntity> userVariants = userVariantRepository.findByOrderId(orderId);
+            orderItemsMap.put(orderId, userVariants);
+        }
+
+        // Lấy tất cả variantSizeIds từ tất cả items
+        List<String> variantSizeIds = orderItemsMap.values().stream()
+                .flatMap(List::stream)
+                .map(UserVariantEntity::getVariantSizeId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        // Batch load variant sizes
+        Map<String, VariantSizeEntity> variantSizeMap = variantSizeIds.isEmpty()
+                ? Map.of()
+                : variantSizeRepository.findAllById(variantSizeIds).stream()
+                .collect(Collectors.toMap(VariantSizeEntity::getId, Function.identity()));
+
+        // Batch load variants
+        List<String> variantIds = variantSizeMap.values().stream()
+                .map(VariantSizeEntity::getVariantId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<String, VariantEntity> variantMap = variantIds.isEmpty()
+                ? Map.of()
+                : variantRepository.findAllById(variantIds).stream()
+                .collect(Collectors.toMap(VariantEntity::getId, Function.identity()));
+
+        // Batch load products
+        List<String> productIds = variantMap.values().stream()
+                .map(VariantEntity::getProductId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<String, ProductEntity> productMap = productIds.isEmpty()
+                ? Map.of()
+                : productRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(ProductEntity::getId, Function.identity()));
+
+        // Load user profile
+        ProfileGetResponse user = null;
+        try {
+            user = profileClient.getProfile(userId).getResult();
+        } catch (Exception e) {
+            log.warn("Could not fetch profile for userId: {}", userId, e);
+        }
+
+        // Batch load images for all products
+        Map<String, CloudinaryResponse> imageCache = batchLoadProductImages(productIds);
+
+        // Map orders to UserPurchasedOrderResponse
+        ProfileGetResponse finalUser = user;
+        List<UserPurchasedOrderResponse> orderResponses = orders.stream()
+                .map(order -> {
+                    List<UserVariantEntity> userVariants = orderItemsMap.get(order.getId());
+                    if (userVariants == null || userVariants.isEmpty()) {
+                        return null;
+                    }
+
+                    // Map items to ItemOrderResponse
+                    List<ItemOrderResponse> items = userVariants.stream()
+                            .map(uv -> {
+                                VariantSizeEntity variantSize = variantSizeMap.get(uv.getVariantSizeId());
+                                if (variantSize == null) return null;
+
+                                VariantEntity variant = variantMap.get(variantSize.getVariantId());
+                                if (variant == null) return null;
+
+                                ProductEntity product = productMap.get(variant.getProductId());
+                                if (product == null) return null;
+
+                                ProductGetResponse productDto = modelMapper.map(product, ProductGetResponse.class);
+                                
+                                // Set image URL
+                                CloudinaryResponse image = imageCache.get(product.getId());
+                                if (image != null) {
+                                    productDto.setImageUrl(image);
+                                }
+
+                                VariantResponse variantDto = VariantResponse.builder()
+                                        .id(variantSize.getId())
+                                        .productId(variant.getProductId())
+                                        .color(variant.getColor())
+                                        .status(variant.getStatus())
+                                        .size(variantSize.getSize())
+                                        .stock(variantSize.getStock())
+                                        .countSell(variantSize.getCountSell())
+                                        .build();
+
+                                return ItemOrderResponse.builder()
+                                        .id(uv.getId())
+                                        .product(productDto)
+                                        .variant(variantDto)
+                                        .countBuy(uv.getQuantity())
+                                        .totalMoney(uv.getTotalPrice())
+                                        .build();
+                            })
+                            .filter(Objects::nonNull)
+                            .toList();
+
+                    if (items.isEmpty()) {
+                        return null;
+                    }
+
+                    return UserPurchasedOrderResponse.builder()
+                            .listPurchase(items)
+                            .userId(order.getUserId())
+                            .orderId(order.getId())
+                            .totalPrice(order.getTotalPrice())
+                            .discountPercent(order.getDiscountPercent())
+                            .addressId(order.getAddressId())
+                            .finishPrice(order.getFinishPrice())
+                            .user(finalUser)
+                            .build();
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        return new PageResponse<>(
+                page,
+                ordersPage.getSize(),
+                ordersPage.getTotalElements(),
+                ordersPage.getTotalPages(),
+                orderResponses
+        );
+    }
+
+    public PageResponse<UserOrderResponse> getPurchasedByUserId(String userId, int page, int size) {
+        // Phân trang PurchaseOrderEntity của user
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdDate");
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), sort);
+        Page<PurchaseOrderEntity> ordersPage = purchaseOrderRepository.findByUserId(userId, pageable);
+        List<PurchaseOrderEntity> orders = ordersPage.getContent();
         
         if (orders.isEmpty()) {
             return new PageResponse<>(page, size, 0, 0, List.of());
@@ -342,94 +497,58 @@ public class UserVariantService {
                 .map(PurchaseOrderEntity::getId)
                 .toList();
         
-        // Lấy tất cả UserVariantEntity từ các orders
-        List<UserVariantEntity> allUserVariants = new ArrayList<>();
+        // Lấy tất cả UserVariantEntity từ các orders và nhóm theo orderId
+        Map<String, List<UserVariantEntity>> orderItemsMap = new java.util.HashMap<>();
         for (String orderId : orderIds) {
             List<UserVariantEntity> userVariants = userVariantRepository.findByOrderId(orderId);
-            allUserVariants.addAll(userVariants);
+            orderItemsMap.put(orderId, userVariants);
         }
         
-        // Sort theo createdDate DESC
-        allUserVariants.sort((a, b) -> {
-            if (a.getCreatedDate() == null && b.getCreatedDate() == null) return 0;
-            if (a.getCreatedDate() == null) return 1;
-            if (b.getCreatedDate() == null) return -1;
-            return b.getCreatedDate().compareTo(a.getCreatedDate());
-        });
+        // Load user profile
+        ProfileGetResponse user = null;
+        try {
+            user = profileClient.getProfile(userId).getResult();
+        } catch (Exception e) {
+            log.warn("Could not fetch profile for userId: {}", userId, e);
+        }
         
-        // Batch load variant sizes
-        List<String> variantSizeIds = allUserVariants.stream()
-                .map(UserVariantEntity::getVariantSizeId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        
-        Map<String, VariantSizeEntity> variantSizeMap = variantSizeIds.isEmpty()
-                ? Map.of()
-                : variantSizeRepository.findAllById(variantSizeIds).stream()
-                .collect(Collectors.toMap(VariantSizeEntity::getId, Function.identity()));
-        
-        // Batch load variants
-        List<String> variantIds = variantSizeMap.values().stream()
-                .map(VariantSizeEntity::getVariantId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        
-        Map<String, VariantEntity> variantMap = variantIds.isEmpty()
-                ? Map.of()
-                : variantRepository.findAllById(variantIds).stream()
-                .collect(Collectors.toMap(VariantEntity::getId, Function.identity()));
-        
-        // Map to response (không load product)
-        List<UserPurchasedItemResponse> allItems = allUserVariants.stream()
-                .map(uv -> {
-                    VariantSizeEntity variantSize = variantSizeMap.get(uv.getVariantSizeId());
-                    if (variantSize == null) return null;
+        // Map orders to UserOrderResponse
+        ProfileGetResponse finalUser = user;
+        List<UserOrderResponse> orderResponses = orders.stream()
+                .map(order -> {
+                    List<UserVariantEntity> userVariants = orderItemsMap.get(order.getId());
+                    if (userVariants == null || userVariants.isEmpty()) {
+                        return null;
+                    }
                     
-                    VariantEntity variant = variantMap.get(variantSize.getVariantId());
-                    if (variant == null) return null;
+                    // Tính tổng countBuy và totalMoney từ các items trong order
+                    long totalCountBuy = userVariants.stream()
+                            .mapToLong(UserVariantEntity::getQuantity)
+                            .sum();
                     
-                    VariantResponse variantDto = VariantResponse.builder()
-                            .id(variantSize.getId())
-                            .productId(variant.getProductId())
-                            .color(variant.getColor())
-                            .status(variant.getStatus())
-                            .size(variantSize.getSize())
-                            .stock(variantSize.getStock())
-                            .countSell(variantSize.getCountSell())
-                            .build();
+                    double totalMoney = userVariants.stream()
+                            .mapToDouble(UserVariantEntity::getTotalPrice)
+                            .sum();
                     
-                    return UserPurchasedItemResponse.builder()
-                            .id(uv.getId())
-                            .product(null) // Không lấy product
-                            .variant(variantDto)
-                            .countBuy(uv.getQuantity())
-                            .totalMoney(uv.getTotalPrice())
-                            .userId(uv.getUserId())
+                    return UserOrderResponse.builder()
+                            .orderId(order.getId())
+                            .totalPrice(order.getTotalPrice())
+                            .discountPercent(order.getDiscountPercent())
+                            .finishPrice(order.getFinishPrice())
+                            .countBuy(totalCountBuy)
+                            .totalMoney(totalMoney)
+                            .user(finalUser)
                             .build();
                 })
                 .filter(Objects::nonNull)
                 .toList();
         
-        // Pagination thủ công cho items
-        int totalElements = allItems.size();
-        int pageSize = Math.max(1, size);
-        int pageIndex = Math.max(0, page - 1);
-        int start = pageIndex * pageSize;
-        int end = Math.min(start + pageSize, totalElements);
-        List<UserPurchasedItemResponse> pagedItems = (start < totalElements) 
-                ? allItems.subList(start, end) 
-                : List.of();
-        
-        int totalPages = (int) Math.ceil((double) totalElements / pageSize);
-        
         return new PageResponse<>(
                 page,
-                pageSize,
-                totalElements,
-                totalPages,
-                pagedItems
+                ordersPage.getSize(),
+                ordersPage.getTotalElements(),
+                ordersPage.getTotalPages(),
+                orderResponses
         );
     }
 
