@@ -15,4 +15,5 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class HistoryProductEntity extends BaseEntity {
     String variantSizeId;
     int count;
+    int stock;
 }

@@ -244,14 +244,15 @@ public class VariantService {
                 throw new AppException(ErrorCode.INVALID_REQUEST); // variant không thuộc product
 
             if (it.getCount() == 0) continue; // bỏ qua delta = 0
-
-            long newStock = (long) variantSize.getStock() + it.getCount();
+            int stockOld = variantSize.getStock();
+            long newStock = (long) stockOld + it.getCount();
             if (newStock < 0) throw new AppException(ErrorCode.INVALID_REQUEST); // không cho âm
 
             variantSize.setStock((int) newStock);
             toUpdate.add(variantSize);
 
             HistoryProductEntity h = new HistoryProductEntity();
+            h.setStock(stockOld);
             h.setVariantSizeId(variantSize.getId()); // Lưu variantSizeId vào history
             h.setCount(it.getCount()); // dương: nhập, âm: xuất/giảm
             histories.add(h);
@@ -396,6 +397,8 @@ public class VariantService {
 
                     VariantHistoryResponse.VariantHistoryResponseBuilder b = VariantHistoryResponse.builder()
                             .id(h.getId())
+                            .date(h.getCreatedDate())
+                            .oldStock(h.getStock())
                             .count(h.getCount());
 
                     if (variantSize != null && variant != null) {
@@ -429,41 +432,6 @@ public class VariantService {
                 p.getTotalPages(),
                 items
         );
-    }
-
-    public VariantResponse updateVariant(VariantUpdateRequest request) {
-        // request.getId() là ID của VariantSizeEntity
-        VariantSizeEntity variantSize = variantSizeRepository.findById(request.getId())
-                .orElseThrow(() -> new AppException(ErrorCode.VARIANT_NOT_FOUND));
-        
-        VariantEntity variant = variantRepository.findById(variantSize.getVariantId())
-                .orElseThrow(() -> new AppException(ErrorCode.VARIANT_NOT_FOUND));
-        
-        // Cập nhật color của VariantEntity nếu có thay đổi
-        if (request.getColor() != null && !request.getColor().equals(variant.getColor())) {
-            variant.setColor(request.getColor());
-            variantRepository.save(variant);
-        }
-        
-        // Cập nhật size của VariantSizeEntity nếu có thay đổi
-        if (request.getSize() != null && !request.getSize().equals(variantSize.getSize())) {
-            // Kiểm tra xem size mới đã tồn tại cho variant này chưa
-            if (variantSizeRepository.existsByVariantIdAndSize(variantSize.getVariantId(), request.getSize())) {
-                throw new AppException(ErrorCode.VARIANT_DUPLICATED);
-            }
-            variantSize.setSize(request.getSize());
-            variantSizeRepository.save(variantSize);
-        }
-
-        return VariantResponse.builder()
-                .id(variantSize.getId())
-                .productId(variant.getProductId())
-                .color(variant.getColor())
-                .status(variant.getStatus())
-                .size(variantSize.getSize())
-                .stock(variantSize.getStock())
-                .countSell(variantSize.getCountSell())
-                .build();
     }
 
     @Transactional
