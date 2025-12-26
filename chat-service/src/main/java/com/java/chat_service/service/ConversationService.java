@@ -25,7 +25,7 @@ public class ConversationService {
     ConversationRepository conversationRepository;
     IdentityClient identityClient;
 
-    public List<ConversationResponse> myConversations() {
+    public List<ConversationResponse> myConversations(String name) {
         String currentUserId = GetInfo.getLoggedInUserName();
         if (currentUserId == null) {
             throw new AppException(ErrorCode.UNAUTHORIZED);

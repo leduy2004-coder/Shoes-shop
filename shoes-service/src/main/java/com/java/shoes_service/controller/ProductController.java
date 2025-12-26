@@ -142,14 +142,14 @@ public class ProductController {
 
     @GetMapping("/purchased/by-user/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<PageResponse<UserOrderResponse>> getPurchasedByUserId(
+    public ApiResponse<PageResponse<UserPurchasedOrderResponse>> getPurchasedByUserId(
             @PathVariable String userId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         // Admin: lấy lịch sử mua của user cụ thể từ PurchaseOrderEntity
-        PageResponse<UserOrderResponse> data = userVariantService.getPurchasedByUserId(userId, page, size);
-        return ApiResponse.<PageResponse<UserOrderResponse>>builder()
+        PageResponse<UserPurchasedOrderResponse> data = userVariantService.getPurchasedOrdersByUser(userId, page, size);
+        return ApiResponse.<PageResponse<UserPurchasedOrderResponse>>builder()
                 .result(data)
                 .build();
     }

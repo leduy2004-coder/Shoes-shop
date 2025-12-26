@@ -5,12 +5,7 @@ import com.java.CloudinaryResponse;
 import com.java.ImageType;
 import com.java.ProfileGetResponse;
 import com.java.shoes_service.dto.PageResponse;
-import com.java.shoes_service.dto.product.product.ItemOrderResponse;
-import com.java.shoes_service.dto.product.product.OrderDetailResponse;
-import com.java.shoes_service.dto.product.product.ProductGetResponse;
-import com.java.shoes_service.dto.product.product.UserOrderResponse;
-import com.java.shoes_service.dto.product.product.UserPurchasedItemResponse;
-import com.java.shoes_service.dto.product.product.UserPurchasedOrderResponse;
+import com.java.shoes_service.dto.product.product.*;
 import com.java.shoes_service.dto.product.variant.*;
 import com.java.shoes_service.entity.order.PurchaseOrderEntity;
 import com.java.shoes_service.entity.order.UserVariantEntity;
@@ -171,6 +166,7 @@ public class UserVariantService {
                 .couponCode(couponCode)
                 .discountPercent(discountPercent)
                 .addressId(addressId) // Lưu addressId
+                .status(false)
                 .build();
 
         purchaseOrder = purchaseOrderRepository.save(purchaseOrder);
@@ -472,77 +468,6 @@ public class UserVariantService {
                 .filter(Objects::nonNull)
                 .toList();
 
-        return new PageResponse<>(
-                page,
-                ordersPage.getSize(),
-                ordersPage.getTotalElements(),
-                ordersPage.getTotalPages(),
-                orderResponses
-        );
-    }
-
-    public PageResponse<UserOrderResponse> getPurchasedByUserId(String userId, int page, int size) {
-        // Phân trang PurchaseOrderEntity của user
-        Sort sort = Sort.by(Sort.Direction.DESC, "createdDate");
-        Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), sort);
-        Page<PurchaseOrderEntity> ordersPage = purchaseOrderRepository.findByUserId(userId, pageable);
-        List<PurchaseOrderEntity> orders = ordersPage.getContent();
-        
-        if (orders.isEmpty()) {
-            return new PageResponse<>(page, size, 0, 0, List.of());
-        }
-        
-        // Lấy tất cả orderIds
-        List<String> orderIds = orders.stream()
-                .map(PurchaseOrderEntity::getId)
-                .toList();
-        
-        // Lấy tất cả UserVariantEntity từ các orders và nhóm theo orderId
-        Map<String, List<UserVariantEntity>> orderItemsMap = new java.util.HashMap<>();
-        for (String orderId : orderIds) {
-            List<UserVariantEntity> userVariants = userVariantRepository.findByOrderId(orderId);
-            orderItemsMap.put(orderId, userVariants);
-        }
-        
-        // Load user profile
-        ProfileGetResponse user = null;
-        try {
-            user = profileClient.getProfile(userId).getResult();
-        } catch (Exception e) {
-            log.warn("Could not fetch profile for userId: {}", userId, e);
-        }
-        
-        // Map orders to UserOrderResponse
-        ProfileGetResponse finalUser = user;
-        List<UserOrderResponse> orderResponses = orders.stream()
-                .map(order -> {
-                    List<UserVariantEntity> userVariants = orderItemsMap.get(order.getId());
-                    if (userVariants == null || userVariants.isEmpty()) {
-                        return null;
-                    }
-                    
-                    // Tính tổng countBuy và totalMoney từ các items trong order
-                    long totalCountBuy = userVariants.stream()
-                            .mapToLong(UserVariantEntity::getQuantity)
-                            .sum();
-                    
-                    double totalMoney = userVariants.stream()
-                            .mapToDouble(UserVariantEntity::getTotalPrice)
-                            .sum();
-                    
-                    return UserOrderResponse.builder()
-                            .orderId(order.getId())
-                            .totalPrice(order.getTotalPrice())
-                            .discountPercent(order.getDiscountPercent())
-                            .finishPrice(order.getFinishPrice())
-                            .countBuy(totalCountBuy)
-                            .totalMoney(totalMoney)
-                            .user(finalUser)
-                            .build();
-                })
-                .filter(Objects::nonNull)
-                .toList();
-        
         return new PageResponse<>(
                 page,
                 ordersPage.getSize(),

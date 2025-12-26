@@ -290,7 +290,7 @@ public class VariantService {
                 .toList();
     }
 
-    public PageResponse<VariantHistoryResponse> getHistory(String variantSizeId, String productId, String variantId, int page, int size) {
+    public PageResponse<VariantHistoryResponse> getHistory(String variantSizeId, String productId, String variantId, String name, int page, int size) {
         Pageable pageable = PageRequest.of(
                 Math.max(0, page - 1),
                 Math.max(1, size),
@@ -320,6 +320,30 @@ public class VariantService {
                 targetVariantSizeIds = variantSizes.stream()
                         .map(VariantSizeEntity::getId)
                         .toList();
+            }
+        }else if (name != null && !name.isBlank()) {
+            // Tìm theo name: search products có name chứa keyword -> lấy tất cả variants -> variantSizes
+            List<ProductEntity> products = productRepository.findByNameContainingIgnoreCase(name.trim());
+
+            if (!products.isEmpty()) {
+                List<String> productIds = products.stream()
+                        .map(ProductEntity::getId)
+                        .toList();
+
+                // Lấy tất cả variants của các products này
+                List<VariantEntity> variants = variantRepository.findByProductIdIn(productIds);
+
+                if (!variants.isEmpty()) {
+                    List<String> variantIds = variants.stream()
+                            .map(VariantEntity::getId)
+                            .toList();
+
+                    // Lấy tất cả variantSizes
+                    List<VariantSizeEntity> variantSizes = variantSizeRepository.findByVariantIdIn(variantIds);
+                    targetVariantSizeIds = variantSizes.stream()
+                            .map(VariantSizeEntity::getId)
+                            .toList();
+                }
             }
         }
 

@@ -6,17 +6,15 @@ import com.java.shoes_service.dto.payment.PaymentGetResponse;
 import com.java.shoes_service.dto.payment.PaymentRequest;
 import com.java.shoes_service.dto.payment.PaymentResponse;
 import com.java.shoes_service.dto.payment.TopPayerResponse;
-import com.java.shoes_service.dto.product.product.ProductGetResponse;
-import com.java.shoes_service.dto.product.variant.VariantResponse;
+import com.java.shoes_service.dto.product.product.OrderDetailResponse;
 import com.java.shoes_service.entity.PaymentEntity;
-import com.java.shoes_service.entity.product.ProductEntity;
+import com.java.shoes_service.entity.order.PurchaseOrderEntity;
 import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
 import com.java.shoes_service.repository.PaymentRepository;
-import com.java.shoes_service.repository.httpClient.FileClient;
 import com.java.shoes_service.repository.httpClient.ProfileClient;
-import com.java.shoes_service.repository.product.ProductRepository;
-import com.java.shoes_service.service.product.VariantService;
+import com.java.shoes_service.repository.order.PurchaseOrderRepository;
+import com.java.shoes_service.service.product.UserVariantService;
 import com.java.shoes_service.utility.GetInfo;
 import com.java.shoes_service.utility.VNPayUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -52,19 +50,22 @@ public class PaymentService {
 
     final VNPAYConfig vnPayConfig;
     final ModelMapper modelMapper;
-    final ProductRepository productRepository;
     final ProfileClient profileClient;
-    final VariantService variantService;
-    final FileClient fileClient;
-
+    final PurchaseOrderRepository purchaseOrderRepository;
+    final UserVariantService userVariantService;
 
     public PaymentResponse createPaymentProduct(PaymentRequest paymentRequest) {
         PaymentEntity paymentEntity = modelMapper.map(paymentRequest, PaymentEntity.class);
         paymentEntity.setUserId(paymentRequest.getUserId());
-        paymentEntity.setVariantSizeId(paymentRequest.getVariantSizeId());
+        paymentEntity.setOrderId(paymentRequest.getVariantSizeId());
         PaymentEntity savedPaymentEntity = paymentRepository.save(paymentEntity);
 
-        log.info("Payment created successfully for variantSizeId: {}", paymentRequest.getVariantSizeId());
+        PurchaseOrderEntity purchaseOrder = purchaseOrderRepository.findById(paymentEntity.getOrderId()).orElse(null);
+        assert purchaseOrder != null;
+        purchaseOrder.setStatus(true);
+        purchaseOrderRepository.save(purchaseOrder);
+
+        log.info("Payment created successfully for orderId: {}", paymentRequest.getVariantSizeId());
         return modelMapper.map(savedPaymentEntity, PaymentResponse.class);
     }
 
@@ -73,7 +74,7 @@ public class PaymentService {
             System.out.println("Creating VNPAY Payment...");
             long amount = (long) Integer.parseInt(request.getParameter("amount")) * 100L;
             String bankCode = request.getParameter("bankCode");
-            String variantSizeId = request.getParameter("variantSizeId");
+            String variantSizeId = request.getParameter("orderId");
             String userId = GetInfo.getLoggedInUserName(); // Lấy userId
 
             // Kiểm tra giá trị đầu vào
@@ -162,7 +163,7 @@ public class PaymentService {
 
     private PaymentGetResponse mapToPaymentGetResponse(PaymentEntity paymentEntity) {
         PaymentGetResponse response = modelMapper.map(paymentEntity, PaymentGetResponse.class);
-        response.setId(paymentEntity.getId());
+        response.setPaymentId(paymentEntity.getId());
 
         // Lấy thông tin user
         try {
@@ -172,37 +173,12 @@ public class PaymentService {
             response.setUser(null);
         }
 
-        // Lấy thông tin variant và product từ variantSizeId
-        if (paymentEntity.getVariantSizeId() != null && !paymentEntity.getVariantSizeId().isEmpty()) {
+        if (paymentEntity.getOrderId() != null && !paymentEntity.getOrderId().isEmpty()) {
             try {
-                // Lấy variant từ variantSizeId
-                VariantResponse variant = variantService.getVariantById(paymentEntity.getVariantSizeId());
-                response.setVariant(variant);
-
-                // Lấy product từ productId trong variant
-                if (variant != null && variant.getProductId() != null) {
-                    ProductEntity productEntity = productRepository.findById(variant.getProductId()).orElse(null);
-                    if (productEntity != null) {
-                        ProductGetResponse productResponse = modelMapper.map(productEntity, ProductGetResponse.class);
-                        // Lấy ảnh primary
-                        try {
-                            var imageRes = fileClient.getImage(productEntity.getId(), com.java.ImageType.PRODUCT);
-                            if (imageRes != null && imageRes.getResult() != null) {
-                                productResponse.setImageUrl(imageRes.getResult().stream()
-                                        .filter(com.java.CloudinaryResponse::getIsPrimary)
-                                        .findFirst()
-                                        .orElse(null));
-                            }
-                        } catch (Exception e) {
-                            log.warn("Could not fetch image for productId: {}", productEntity.getId(), e);
-                        }
-                        response.setProduct(productResponse);
-                    }
-                }
+                OrderDetailResponse variant = userVariantService.getOrderDetailByPurchaseId(paymentEntity.getOrderId());
+                response.setResponse(variant);
             } catch (Exception e) {
-                log.warn("Could not fetch variant/product for variantSizeId: {}", paymentEntity.getVariantSizeId(), e);
-                response.setVariant(null);
-                response.setProduct(null);
+                return null;
             }
         }
 

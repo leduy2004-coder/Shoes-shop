@@ -14,7 +14,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PaymentEntity extends BaseEntity {
     String userId;
-    String variantSizeId;
+    String orderId;
     String code;
     Integer amount;
     String bankCode;

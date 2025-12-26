@@ -27,9 +27,10 @@ public class ConversationController {
     }
 
     @GetMapping("/list")
-    ApiResponse<List<ConversationResponse>> myConversations() {
+    ApiResponse<List<ConversationResponse>> myConversations(@RequestParam(required = false) String name) {
         return ApiResponse.<List<ConversationResponse>>builder()
-                .result(conversationService.myConversations())
+                .result(conversationService.myConversations(name))
                 .build();
     }
+
 }

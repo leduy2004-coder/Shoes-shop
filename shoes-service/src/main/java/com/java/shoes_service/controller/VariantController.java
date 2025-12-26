@@ -37,14 +37,16 @@ public class VariantController {
             @RequestParam(required = false) String variantSizeId, // ID của VariantSizeEntity
             @RequestParam(required = false) String productId,      // ID của ProductEntity
             @RequestParam(required = false) String variantId,       // ID của VariantEntity
+            @RequestParam(required = false) String name,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        PageResponse<VariantHistoryResponse> res = variantService.getHistory(variantSizeId, productId, variantId, page, size);
+        PageResponse<VariantHistoryResponse> res = variantService.getHistory(variantSizeId, productId, variantId, name, page, size);
         return ApiResponse.<PageResponse<VariantHistoryResponse>>builder()
                 .result(res)
                 .build();
     }
+
     @DeleteMapping("/delete/{id}")
     public ApiResponse<Boolean> deleteVariant(@PathVariable String id) {
         return ApiResponse.<Boolean>builder()

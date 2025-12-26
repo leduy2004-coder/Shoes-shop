@@ -16,4 +16,6 @@ public interface VariantRepository extends MongoRepository<VariantEntity, String
     Optional<VariantEntity> findByProductIdAndColorIgnoreCase(String productId, String color);
     
     boolean existsByProductIdAndColorIgnoreCase(String productId, String color);
+
+    List<VariantEntity> findByProductIdIn(List<String> productIds);
 }

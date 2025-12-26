@@ -18,4 +18,5 @@ public class UserVariantEntity extends BaseEntity {
     long quantity;
     Double totalPrice;
     String orderId;
+    Boolean status;
 }
