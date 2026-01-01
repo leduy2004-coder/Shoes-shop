@@ -220,6 +220,7 @@ public class UserVariantService {
                     .orderId(purchaseOrder.getId())
                     .variantSizeId(variantSize.getId())
                     .quantity(quantity)
+                    .status(false)
                     .totalPrice(itemPrice)
                     .build();
             
@@ -332,7 +333,7 @@ public class UserVariantService {
         // Phân trang PurchaseOrderEntity của user
         Sort sort = Sort.by(Sort.Direction.DESC, "createdDate");
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), sort);
-        Page<PurchaseOrderEntity> ordersPage = purchaseOrderRepository.findByUserId(userId, pageable);
+        Page<PurchaseOrderEntity> ordersPage = purchaseOrderRepository.findByUserIdAndStatus(userId,true, pageable);
         List<PurchaseOrderEntity> orders = ordersPage.getContent();
 
         if (orders.isEmpty()) {
@@ -509,7 +510,7 @@ public class UserVariantService {
         // Phân trang UserVariantEntity có variantSizeId trong danh sách
         Sort sort = Sort.by(Sort.Direction.DESC, "createdDate");
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), Math.max(1, size), sort);
-        Page<UserVariantEntity> userVariantsPage = userVariantRepository.findByVariantSizeIdIn(variantSizeIds, pageable);
+        Page<UserVariantEntity> userVariantsPage = userVariantRepository.findByVariantSizeIdInAndStatus(variantSizeIds,true, pageable);
         List<UserVariantEntity> userVariants = userVariantsPage.getContent();
 
         // Batch load user profiles

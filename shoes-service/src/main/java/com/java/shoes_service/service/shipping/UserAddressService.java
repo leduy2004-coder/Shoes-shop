@@ -28,15 +28,26 @@ public class UserAddressService {
     @Transactional
     public UserAddressResponse createUserAddress(UserAddressRequest request) {
 
-        if (request.getProvinceCode() == null || request.getDistrictCode() == null || request.getWardCode() == null) {
+        if (request.getProvinceCode() == null
+                || request.getDistrictCode() == null
+                || request.getWardCode() == null) {
             throw new IllegalArgumentException("Province, district, ward are required");
         }
-        if (request.getAddressLine() == null || request.getAddressLine().isBlank()) {
+
+        if (!StringUtils.hasText(request.getAddressLine())) {
             throw new IllegalArgumentException("addressLine is required");
         }
 
-        UserAddress userAddress = modelMapper.map(request, UserAddress.class);
+        // Nếu address mới là default → reset các address cũ
+        if (Boolean.TRUE.equals(request.getIsDefault())) {
+            List<UserAddress> userAddresses =
+                    userAddressRepository.findByUserId(request.getUserId());
 
+            userAddresses.forEach(addr -> addr.setIsDefault(false));
+            userAddressRepository.saveAll(userAddresses);
+        }
+
+        UserAddress userAddress = modelMapper.map(request, UserAddress.class);
         UserAddress saved = userAddressRepository.save(userAddress);
 
         return modelMapper.map(saved, UserAddressResponse.class);

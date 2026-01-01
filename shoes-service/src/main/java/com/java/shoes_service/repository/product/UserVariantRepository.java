@@ -17,7 +17,7 @@ public interface UserVariantRepository extends MongoRepository<UserVariantEntity
     List<UserVariantEntity> findTop10ByOrderByCreatedDateDesc();
     
     List<UserVariantEntity> findByVariantSizeIdIn(List<String> variantSizeIds);
-    Page<UserVariantEntity> findByVariantSizeIdIn(List<String> variantSizeIds, Pageable pageable);
+    Page<UserVariantEntity> findByVariantSizeIdInAndStatus(List<String> variantSizeIds, Boolean status, Pageable pageable);
     
     List<UserVariantEntity> findByOrderId(String orderId);
 

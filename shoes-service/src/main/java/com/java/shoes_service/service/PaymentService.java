@@ -9,11 +9,13 @@ import com.java.shoes_service.dto.payment.TopPayerResponse;
 import com.java.shoes_service.dto.product.product.OrderDetailResponse;
 import com.java.shoes_service.entity.PaymentEntity;
 import com.java.shoes_service.entity.order.PurchaseOrderEntity;
+import com.java.shoes_service.entity.order.UserVariantEntity;
 import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
 import com.java.shoes_service.repository.PaymentRepository;
 import com.java.shoes_service.repository.httpClient.ProfileClient;
 import com.java.shoes_service.repository.order.PurchaseOrderRepository;
+import com.java.shoes_service.repository.product.UserVariantRepository;
 import com.java.shoes_service.service.product.UserVariantService;
 import com.java.shoes_service.utility.GetInfo;
 import com.java.shoes_service.utility.VNPayUtil;
@@ -53,6 +55,7 @@ public class PaymentService {
     final ProfileClient profileClient;
     final PurchaseOrderRepository purchaseOrderRepository;
     final UserVariantService userVariantService;
+    final UserVariantRepository userVariantRepository;
 
     public PaymentResponse createPaymentProduct(PaymentRequest paymentRequest) {
         PaymentEntity paymentEntity = modelMapper.map(paymentRequest, PaymentEntity.class);
@@ -64,6 +67,10 @@ public class PaymentService {
         assert purchaseOrder != null;
         purchaseOrder.setStatus(true);
         purchaseOrderRepository.save(purchaseOrder);
+
+        List<UserVariantEntity> variantEntities = userVariantRepository.findByOrderId(paymentEntity.getOrderId());
+        variantEntities.forEach(v -> v.setStatus(true));
+        userVariantRepository.saveAll(variantEntities);
 
         log.info("Payment created successfully for orderId: {}", paymentRequest.getVariantSizeId());
         return modelMapper.map(savedPaymentEntity, PaymentResponse.class);

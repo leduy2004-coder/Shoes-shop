@@ -23,6 +23,6 @@ public class UserAddressRequest {
     String wardName;
 
     String addressLine;
-    Boolean isDefault;
+    Boolean isDefault = false;
 
 }

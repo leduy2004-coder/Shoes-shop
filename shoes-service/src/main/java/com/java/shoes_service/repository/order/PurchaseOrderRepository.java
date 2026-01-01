@@ -10,10 +10,8 @@ import java.util.List;
 
 @Repository
 public interface PurchaseOrderRepository extends MongoRepository<PurchaseOrderEntity, String> {
-    List<PurchaseOrderEntity> findByUserId(String userId);
-    
-    Page<PurchaseOrderEntity> findByUserId(String userId, Pageable pageable);
-    
-    List<PurchaseOrderEntity> findByCouponCode(String couponCode);
+
+    Page<PurchaseOrderEntity> findByUserIdAndStatus(String userId, Boolean status, Pageable pageable);
+
 }
 
