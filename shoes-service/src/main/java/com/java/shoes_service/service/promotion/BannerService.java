@@ -62,19 +62,14 @@ public class BannerService {
         );
     }
 
-
-
     public BannerResponse getBannerBySlot(BannerSlot slot) {
-        BannerEntity entity = bannerRepository.findBySlot(slot)
+        BannerEntity entity = bannerRepository.findBySlotAndActive(slot, true)
                 .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));
 
         return toDto(entity);
     }
 
     public BannerResponse createOrUpdate(BannerRequest request, MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new AppException(ErrorCode.UPLOAD_FAILED);
-        }
 
         // Tìm banner theo slot (mỗi slot chỉ có 1 banner)
         BannerEntity banner = bannerRepository.findBySlot(request.getSlot())
@@ -86,25 +81,31 @@ public class BannerService {
                 });
 
         // Cập nhật các field từ request (title, link, active,...)
-        banner.setTitle(request.getTitle());
-        banner.setLink(request.getLink());
-        banner.setActive(true); // tuỳ nhu cầu
-        // nếu còn field khác trong request thì set thêm
-
-        // Nếu đã có ảnh cũ -> xoá khỏi storage
-        try {
-            if (banner.getNameImage() != null && !banner.getNameImage().isBlank()) {
-                fileClient.deleteByNameImage(banner.getNameImage(), ImageType.BANNER);
-            }
-        } catch (Exception e) {
-            // log.warn("Delete old banner image failed for slot {}", banner.getSlot(), e);
+        if (request.getTitle() != null ) {
+            banner.setTitle(request.getTitle());
+        }
+        if (request.getLink() != null) {
+            banner.setLink(request.getLink());
+        }
+        if (request.getActive() != null){
+            banner.setActive(request.getActive());
         }
 
-        // Upload ảnh mới
-        var upload = fileClient.uploadMediaBanner(file, banner.getId() != null ? banner.getId() : banner.getSlot().name())
-                .getResult();
-        banner.setImageUrl(upload.getUrl());
-        banner.setNameImage(upload.getFileName());
+        if (file != null) {
+            try {
+                if (banner.getNameImage() != null && !banner.getNameImage().isBlank()) {
+                    fileClient.deleteByNameImage(banner.getNameImage(), ImageType.BANNER);
+                }
+            } catch (Exception e) {
+                // log.warn("Delete old banner image failed for slot {}", banner.getSlot(), e);
+            }
+
+            // Upload ảnh mới
+            var upload = fileClient.uploadMediaBanner(file, banner.getId() != null ? banner.getId() : banner.getSlot().name())
+                    .getResult();
+            banner.setImageUrl(upload.getUrl());
+            banner.setNameImage(upload.getFileName());
+        }
 
         banner = bannerRepository.save(banner);
         return toDto(banner);

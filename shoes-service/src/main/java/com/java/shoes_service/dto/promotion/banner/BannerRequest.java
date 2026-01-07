@@ -15,4 +15,5 @@ public class BannerRequest {
     String title;
     String link;
     BannerSlot slot;
+    Boolean active;
 }

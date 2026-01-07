@@ -13,6 +13,8 @@ import java.util.Optional;
 
 @Repository
 public interface BannerRepository extends MongoRepository<BannerEntity, String> {
+    Optional<BannerEntity> findBySlotAndActive(BannerSlot bannerSlot, Boolean active);
+
     Optional<BannerEntity> findBySlot(BannerSlot bannerSlot);
 
     Page<BannerEntity> findByTitleRegexIgnoreCase(String titleRegex, Pageable pageable);
