@@ -6,8 +6,14 @@ import com.java.shoes_service.dto.promotion.review.ReviewResponse;
 import com.java.shoes_service.entity.promotion.ReviewEntity;
 import com.java.shoes_service.exception.AppException;
 import com.java.shoes_service.exception.ErrorCode;
+import com.java.shoes_service.entity.order.PurchaseOrderEntity;
+import com.java.shoes_service.entity.product.VariantEntity;
+import com.java.shoes_service.entity.product.VariantSizeEntity;
 import com.java.shoes_service.repository.httpClient.ProfileClient;
+import com.java.shoes_service.repository.order.PurchaseOrderRepository;
 import com.java.shoes_service.repository.product.ProductRepository;
+import com.java.shoes_service.repository.product.VariantRepository;
+import com.java.shoes_service.repository.product.VariantSizeRepository;
 import com.java.shoes_service.repository.promotion.ReviewRepository;
 import com.java.shoes_service.service.DateTimeFormatter;
 import com.java.shoes_service.utility.GetInfo;
@@ -32,6 +38,9 @@ public class ReviewService {
 
     ReviewRepository reviewRepository;
     ProductRepository productRepository;
+    PurchaseOrderRepository purchaseOrderRepository;
+    VariantSizeRepository variantSizeRepository;
+    VariantRepository variantRepository;
     ModelMapper modelMapper;
     DateTimeFormatter dateTimeFormatter;
     ProfileClient profileClient;
@@ -62,21 +71,86 @@ public class ReviewService {
     }
 
     public ReviewResponse create(ReviewRequest request) {
+        // Validate productId
         if (request.getProductId() == null || request.getProductId().isBlank()) {
             throw new AppException(ErrorCode.PRODUCT_NOT_EXISTED);
         }
+        
+        // Validate rating
         if (request.getRating() < 1 || request.getRating() > 5) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
+        // Validate product exists
         var product = productRepository.findById(request.getProductId().trim())
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
 
+        // Get current user
         String userId = GetInfo.getLoggedInUserName();
         if (userId == null || userId.isBlank()) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
+        // Get all completed orders of user to count purchased variants of this product
+        List<PurchaseOrderEntity> completedOrders = purchaseOrderRepository.findByUserIdAndStatus(userId, true, 
+                org.springframework.data.domain.Pageable.unpaged()).getContent();
+        
+        if (completedOrders.isEmpty()) {
+            throw new AppException(ErrorCode.ORDER_NOT_COMPLETED);
+        }
+        
+        // Get all variantSizeIds from all completed orders
+        List<String> allPurchasedVariantSizeIds = completedOrders.stream()
+                .flatMap(o -> o.getVariantIds() != null ? o.getVariantIds().stream() : java.util.stream.Stream.empty())
+                .distinct()
+                .toList();
+        
+        if (allPurchasedVariantSizeIds.isEmpty()) {
+            throw new AppException(ErrorCode.ORDER_DOES_NOT_CONTAIN_PRODUCT);
+        }
+        
+        // Get all variantSizes purchased
+        List<VariantSizeEntity> allPurchasedVariantSizes = variantSizeRepository.findAllById(allPurchasedVariantSizeIds);
+        
+        // Get all variantIds from variantSizes
+        List<String> allPurchasedVariantIds = allPurchasedVariantSizes.stream()
+                .map(VariantSizeEntity::getVariantId)
+                .distinct()
+                .toList();
+        
+        // Get all variants
+        List<VariantEntity> allPurchasedVariants = variantRepository.findAllById(allPurchasedVariantIds);
+        
+        // Filter variantSizes that belong to this product
+        List<String> purchasedVariantSizeIdsOfProduct = allPurchasedVariantSizes.stream()
+                .filter(vs -> {
+                    VariantEntity variant = allPurchasedVariants.stream()
+                            .filter(v -> v.getId().equals(vs.getVariantId()))
+                            .findFirst()
+                            .orElse(null);
+                    return variant != null && variant.getProductId().equals(product.getId());
+                })
+                .map(VariantSizeEntity::getId)
+                .distinct()
+                .toList();
+        
+        // Check if user has purchased any variant of this product
+        if (purchasedVariantSizeIdsOfProduct.isEmpty()) {
+            throw new AppException(ErrorCode.ORDER_DOES_NOT_CONTAIN_PRODUCT);
+        }
+        
+        // Count how many variantSizes of this product user has purchased
+        long purchasedVariantCount = purchasedVariantSizeIdsOfProduct.size();
+        
+        // Count how many reviews user has already made for this product
+        long existingReviewCount = reviewRepository.countByUserIdAndProductId(userId, product.getId());
+        
+        // Check if user has reached the limit (can only review as many times as variantSizes purchased)
+        if (existingReviewCount >= purchasedVariantCount) {
+            throw new AppException(ErrorCode.REVIEW_ALREADY_EXISTS);
+        }
+
+        // Create review
         ReviewEntity entity = ReviewEntity.builder()
                 .productId(product.getId())
                 .userId(userId)

@@ -12,6 +12,7 @@ import lombok.experimental.FieldDefaults;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class UserAddressRequest {
     String userId;
+    String addressId;
 
     Integer provinceCode;
     String provinceName;
@@ -25,4 +26,6 @@ public class UserAddressRequest {
     String addressLine;
     Boolean isDefault = false;
 
+    String nameReceiver;
+    String phoneReceiver;
 }

@@ -27,4 +27,8 @@ public class UserAddress extends BaseEntity {
     String addressLine;
 
     Boolean isDefault;
+
+    String nameReceiver;
+    String phoneReceiver;
+    String emailReceiver;
 }

@@ -61,6 +61,21 @@ public class AddressController {
         return ApiResponse.<List<UserAddressResponse>>builder().result(addresses).build();
     }
 
+    @PutMapping("/{addressId}")
+    public ApiResponse<UserAddressResponse> updateAddress(
+            @PathVariable String addressId,
+            @RequestBody UserAddressRequest request
+    ) {
+        String userId = GetInfo.getLoggedInUserName();
+        if (userId == null) {
+            throw new AppException(ErrorCode.USER_NOT_VALID);
+        }
+        // Set userId from logged in user to ensure security
+        request.setUserId(userId);
+        UserAddressResponse resp = userAddressService.updateUserAddress(addressId, request, userId);
+        return ApiResponse.<UserAddressResponse>builder().result(resp).build();
+    }
+
     @DeleteMapping("/{addressId}")
     public ApiResponse<Boolean> deleteUserAddress(
             @PathVariable String addressId

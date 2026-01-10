@@ -54,7 +54,11 @@ public enum ErrorCode {
     CART_ITEM_NOT_FOUND(1861, "Cart item not found", HttpStatus.NOT_FOUND),
 
     ADDRESS_NOT_EXISTED(1862, "Address not existed", HttpStatus.BAD_REQUEST),
-    PAYMENT_ERROR(1863, "Payment error", HttpStatus.BAD_REQUEST);
+    PAYMENT_ERROR(1863, "Payment error", HttpStatus.BAD_REQUEST),
+    ORDER_NOT_EXISTED(1864, "Order not existed", HttpStatus.BAD_REQUEST),
+    ORDER_NOT_COMPLETED(1865, "Order is not completed yet", HttpStatus.BAD_REQUEST),
+    ORDER_DOES_NOT_CONTAIN_PRODUCT(1866, "Order does not contain this product", HttpStatus.BAD_REQUEST),
+    REVIEW_ALREADY_EXISTS(1867, "Review already exists for this product in this order", HttpStatus.BAD_REQUEST);
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {
         this.code = code;

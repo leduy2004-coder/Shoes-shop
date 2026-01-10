@@ -26,4 +26,6 @@ public class UserAddressResponse {
     String addressLine;
     Boolean isDefault;
 
+    String nameReceiver;
+    String phoneReceiver;
 }

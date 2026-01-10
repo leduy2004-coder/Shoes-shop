@@ -7,6 +7,7 @@ import com.java.ProfileGetResponse;
 import com.java.shoes_service.dto.PageResponse;
 import com.java.shoes_service.dto.product.product.*;
 import com.java.shoes_service.dto.product.variant.*;
+import com.java.shoes_service.entity.order.OrderAddress;
 import com.java.shoes_service.entity.order.PurchaseOrderEntity;
 import com.java.shoes_service.entity.order.UserVariantEntity;
 import com.java.shoes_service.entity.payment.PaymentEntity;
@@ -157,6 +158,26 @@ public class UserVariantService {
         // 5. Xử lý từng variant và lưu UserVariantEntity
         List<UserVariantResponse> responses = new ArrayList<>();
 
+        // 6. Lấy thông tin address và map sang OrderAddress
+        OrderAddress orderAddress = null;
+        if (addressId != null && !addressId.isBlank()) {
+            UserAddress userAddress = userAddressRepository.findById(addressId)
+                    .orElseThrow(() -> new AppException(ErrorCode.ADDRESS_NOT_EXISTED));
+            
+            orderAddress = OrderAddress.builder()
+                    .provinceCode(userAddress.getProvinceCode())
+                    .provinceName(userAddress.getProvinceName())
+                    .districtCode(userAddress.getDistrictCode())
+                    .districtName(userAddress.getDistrictName())
+                    .wardCode(userAddress.getWardCode())
+                    .wardName(userAddress.getWardName())
+                    .addressLine(userAddress.getAddressLine())
+                    .nameReceiver(userAddress.getNameReceiver())
+                    .phoneReceiver(userAddress.getPhoneReceiver())
+                    .emailReceiver(userAddress.getEmailReceiver())
+                    .build();
+        }
+
         // 7. Lưu PurchaseOrderEntity (variantIds giờ là variantSizeIds)
         PurchaseOrderEntity purchaseOrder = PurchaseOrderEntity.builder()
                 .userId(userId)
@@ -165,7 +186,7 @@ public class UserVariantService {
                 .finishPrice(finishPrice)
                 .couponCode(couponCode)
                 .discountPercent(discountPercent)
-                .addressId(addressId) // Lưu addressId
+                .address(orderAddress) // Lưu address trực tiếp
                 .status(false)
                 .build();
 
@@ -461,7 +482,7 @@ public class UserVariantService {
                             .orderId(order.getId())
                             .totalPrice(order.getTotalPrice())
                             .discountPercent(order.getDiscountPercent())
-                            .addressId(order.getAddressId())
+                            .addressId(null) // Không còn dùng addressId nữa, address được lưu trực tiếp trong order
                             .finishPrice(order.getFinishPrice())
                             .user(finalUser)
                             .build();
@@ -628,10 +649,22 @@ public class UserVariantService {
         PurchaseOrderEntity order = purchaseOrderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
 
-        // Lấy address
+        // Lấy address từ order (không cần gọi repository nữa)
         UserAddress address = null;
-        if (order.getAddressId() != null) {
-            address = userAddressRepository.findById(order.getAddressId()).orElse(null);
+        if (order.getAddress() != null) {
+            OrderAddress orderAddress = order.getAddress();
+            address = UserAddress.builder()
+                    .provinceCode(orderAddress.getProvinceCode())
+                    .provinceName(orderAddress.getProvinceName())
+                    .districtCode(orderAddress.getDistrictCode())
+                    .districtName(orderAddress.getDistrictName())
+                    .wardCode(orderAddress.getWardCode())
+                    .wardName(orderAddress.getWardName())
+                    .addressLine(orderAddress.getAddressLine())
+                    .nameReceiver(orderAddress.getNameReceiver())
+                    .phoneReceiver(orderAddress.getPhoneReceiver())
+                    .emailReceiver(orderAddress.getEmailReceiver())
+                    .build();
         }
 
         // Lấy payment
@@ -724,7 +757,7 @@ public class UserVariantService {
                 .finishPrice(order.getFinishPrice())
                 .couponCode(order.getCouponCode())
                 .discountPercent(order.getDiscountPercent())
-                .addressId(order.getAddressId())
+                .addressId(null) // Không còn dùng addressId nữa
                 .createdDate(order.getCreatedDate())
                 .modifiedDate(order.getModifiedDate())
                 .address(address)
@@ -746,10 +779,22 @@ public class UserVariantService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // Lấy address
+        // Lấy address từ order (không cần gọi repository nữa)
         UserAddress address = null;
-        if (order.getAddressId() != null) {
-            address = userAddressRepository.findById(order.getAddressId()).orElse(null);
+        if (order.getAddress() != null) {
+            OrderAddress orderAddress = order.getAddress();
+            address = UserAddress.builder()
+                    .provinceCode(orderAddress.getProvinceCode())
+                    .provinceName(orderAddress.getProvinceName())
+                    .districtCode(orderAddress.getDistrictCode())
+                    .districtName(orderAddress.getDistrictName())
+                    .wardCode(orderAddress.getWardCode())
+                    .wardName(orderAddress.getWardName())
+                    .addressLine(orderAddress.getAddressLine())
+                    .nameReceiver(orderAddress.getNameReceiver())
+                    .phoneReceiver(orderAddress.getPhoneReceiver())
+                    .emailReceiver(orderAddress.getEmailReceiver())
+                    .build();
         }
 
         // Lấy payment
@@ -842,7 +887,7 @@ public class UserVariantService {
                 .finishPrice(order.getFinishPrice())
                 .couponCode(order.getCouponCode())
                 .discountPercent(order.getDiscountPercent())
-                .addressId(order.getAddressId())
+                .addressId(null) // Không còn dùng addressId nữa
                 .createdDate(order.getCreatedDate())
                 .modifiedDate(order.getModifiedDate())
                 .address(address)

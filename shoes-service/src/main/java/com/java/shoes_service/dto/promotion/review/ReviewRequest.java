@@ -12,7 +12,6 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ReviewRequest {
     String productId;
-    String userId;
     int rating;
     String comment;
 }

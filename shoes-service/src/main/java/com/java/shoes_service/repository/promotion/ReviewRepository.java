@@ -18,4 +18,5 @@ public interface ReviewRepository extends MongoRepository<ReviewEntity, String> 
     @Query(value = "{ 'productId': ?0 }", fields = "{ 'rating': 1 }")
     List<ReviewEntity> findRatingsByProductId(String productId);
     long deleteByProductId(String productId);
+    long countByUserIdAndProductId(String userId, String productId);
 }
