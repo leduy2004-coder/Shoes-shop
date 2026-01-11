@@ -20,10 +20,15 @@ public class ReviewController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam String product_id,
-            @RequestParam(required = false, defaultValue = "createdDate,desc") String sort
-    ) {
+            @RequestParam(required = false, defaultValue = "createdDate,desc") String sort) {
         var res = reviewService.getReviewByProduct(page, size, sort, product_id);
         return ApiResponse.<PageResponse<ReviewResponse>>builder().result(res).build();
+    }
+
+    @GetMapping("/check-eligibility")
+    public ApiResponse<Boolean> checkEligibility(@RequestParam String product_id) {
+        boolean canReview = reviewService.checkReviewEligibility(product_id);
+        return ApiResponse.<Boolean>builder().result(canReview).build();
     }
 
     @PostMapping

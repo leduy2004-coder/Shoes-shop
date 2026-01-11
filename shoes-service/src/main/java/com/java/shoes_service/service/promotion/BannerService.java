@@ -37,7 +37,7 @@ public class BannerService {
         Pageable pageable = PageRequest.of(
                 Math.max(0, page - 1),
                 Math.max(1, size),
-                Sort.by(Sort.Direction.DESC, "createdDate")   // sort mặc định: mới nhất trước
+                Sort.by(Sort.Direction.DESC, "createdDate") // sort mặc định: mới nhất trước
         );
 
         Page<BannerEntity> p;
@@ -58,8 +58,7 @@ public class BannerService {
                 p.getSize(),
                 p.getTotalElements(),
                 p.getTotalPages(),
-                items
-        );
+                items);
     }
 
     public BannerResponse getBannerBySlot(BannerSlot slot) {
@@ -81,13 +80,13 @@ public class BannerService {
                 });
 
         // Cập nhật các field từ request (title, link, active,...)
-        if (request.getTitle() != null ) {
+        if (request.getTitle() != null) {
             banner.setTitle(request.getTitle());
         }
         if (request.getLink() != null) {
             banner.setLink(request.getLink());
         }
-        if (request.getActive() != null){
+        if (request.getActive() != null) {
             banner.setActive(request.getActive());
         }
 
@@ -101,7 +100,8 @@ public class BannerService {
             }
 
             // Upload ảnh mới
-            var upload = fileClient.uploadMediaBanner(file, banner.getId() != null ? banner.getId() : banner.getSlot().name())
+            var upload = fileClient
+                    .uploadMediaBanner(file, banner.getId() != null ? banner.getId() : banner.getSlot().name())
                     .getResult();
             banner.setImageUrl(upload.getUrl());
             banner.setNameImage(upload.getFileName());
@@ -110,9 +110,23 @@ public class BannerService {
         banner = bannerRepository.save(banner);
         return toDto(banner);
     }
+
     private BannerResponse toDto(BannerEntity e) {
         return modelMapper.map(e, BannerResponse.class);
     }
 
-}
+    public Boolean delete(String id) {
+        BannerEntity banner = bannerRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_FOUND));
 
+        if (banner.getNameImage() != null && !banner.getNameImage().isBlank()) {
+            try {
+                fileClient.deleteByNameImage(banner.getNameImage(), ImageType.BANNER);
+            } catch (Exception e) {
+                log.warn("Delete banner image failed: {}", e.getMessage());
+            }
+        }
+        bannerRepository.delete(banner);
+        return true;
+    }
+}

@@ -18,6 +18,7 @@ import com.java.shoes_service.repository.order.PurchaseOrderRepository;
 import com.java.shoes_service.repository.product.UserVariantRepository;
 import com.java.shoes_service.service.product.UserVariantService;
 import com.java.shoes_service.utility.GetInfo;
+import com.java.shoes_service.utility.OrderStatus;
 import com.java.shoes_service.utility.VNPayUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AccessLevel;
@@ -65,7 +66,7 @@ public class PaymentService {
 
         PurchaseOrderEntity purchaseOrder = purchaseOrderRepository.findById(paymentEntity.getOrderId()).orElse(null);
         assert purchaseOrder != null;
-        purchaseOrder.setStatus(true);
+        purchaseOrder.setStatus(OrderStatus.SHIPPING);
         purchaseOrderRepository.save(purchaseOrder);
 
         List<UserVariantEntity> variantEntities = userVariantRepository.findByOrderId(paymentEntity.getOrderId());

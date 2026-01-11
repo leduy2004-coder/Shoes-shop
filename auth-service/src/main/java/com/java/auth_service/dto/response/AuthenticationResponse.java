@@ -16,8 +16,6 @@ import java.util.List;
 public class AuthenticationResponse {
     @JsonProperty("access_token")
     String accessToken;
-    @JsonProperty("refresh_token")
-    String refreshToken;
 
     UserRegisterResponse user;
 }

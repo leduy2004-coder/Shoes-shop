@@ -6,7 +6,7 @@ import com.java.auth_service.dto.request.AuthenticationRequest;
 import com.java.auth_service.dto.request.ChangePassRequest;
 import com.java.auth_service.dto.request.UserRequest;
 import com.java.auth_service.dto.response.AuthenticationResponse;
-import com.java.auth_service.dto.response.RoleResponse;
+
 import com.java.auth_service.dto.response.UserRegisterResponse;
 import com.java.auth_service.entity.UserEntity;
 import com.java.auth_service.exception.AppException;
@@ -16,12 +16,15 @@ import com.java.auth_service.service.EmailService;
 import com.java.auth_service.service.UserService;
 import com.java.auth_service.service.impl.JwtService;
 import com.java.auth_service.service.redis.TokenRedisService;
-import com.java.auth_service.utility.GetInfo;
+
 import com.java.auth_service.utility.enumUtils.OtpStatus;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -33,10 +36,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.util.Date;
-import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -73,10 +73,10 @@ public class AuthenticationService {
         return true;
     }
 
-    public AuthenticationResponse authenticate(AuthenticationRequest request) {
+    public AuthenticationResponse authenticate(AuthenticationRequest request, HttpServletResponse response) {
         var jwtToken = "";
         var refreshToken = "";
-        List<RoleResponse> roles;
+
         UserEntity user;
         UserRegisterResponse userRegisterResponse;
         try {
@@ -86,11 +86,14 @@ public class AuthenticationService {
             assert user != null;
             boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
 
-            if (!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED);
+            if (!authenticated)
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
 
             jwtToken = jwtService.generateToken(user);
             refreshToken = jwtService.generateRefreshToken(user);
             tokenRedisService.saveRefreshToken(user.getId(), refreshToken);
+            // Set cookie
+            setRefreshTokenCookie(response, refreshToken);
 
             userRegisterResponse = modelMapper.map(user, UserRegisterResponse.class);
             userRegisterResponse.setRole(user.getRole().getCode());
@@ -100,35 +103,32 @@ public class AuthenticationService {
         }
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
-                .refreshToken(refreshToken)
                 .user(userRegisterResponse)
                 .build();
     }
 
-    public AuthenticationResponse refreshToken(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String authHeader = request.getHeader("Authorization");
-        final String accessToken;
-        final String userName;
-        if (authHeader != null) {
-            authHeader = authHeader.replaceAll("^\"|\"$", "");
-            if (authHeader.startsWith("Bearer ")) {
-                accessToken = authHeader.substring(7);
-            } else
-                throw new AppException(ErrorCode.TOKEN_INVALID);
-        } else
-            throw new AppException(ErrorCode.TOKEN_INVALID);
-        userName = jwtService.extractUserName(accessToken);
+    public AuthenticationResponse refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        var refreshToken = getRefreshTokenFromCookie(request);
 
-        if (userName != null) {
+        if (refreshToken != null) {
+            String userName;
+            try {
+                userName = verifyToken(refreshToken);
+            } catch (AppException e) {
+                log.error("Refresh token validation failed: {}", e.getMessage());
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            }
+
             UserEntity user = userRepository.findById(userName).orElse(null);
+            if (user == null)
+                throw new AppException(ErrorCode.USER_NOT_EXISTED);
 
-            String refreshToken = tokenRedisService.getRefreshToken(userName);
-            if (refreshToken == null) throw new AppException(ErrorCode.RE_TOKEN_EXPIRED);
             String newAccessToken = jwtService.generateToken(user);
             String newRefreshToken = jwtService.generateRefreshToken(user);
-            assert user != null;
-            tokenRedisService.saveRefreshToken(user.getId(), newRefreshToken);
 
+            tokenRedisService.saveRefreshToken(user.getId(), newRefreshToken);
+            // Set cookie
+            setRefreshTokenCookie(response, newRefreshToken);
 
             UserRegisterResponse userRegisterResponse = modelMapper.map(user, UserRegisterResponse.class);
             userRegisterResponse.setRole(user.getRole().getCode());
@@ -136,10 +136,31 @@ public class AuthenticationService {
             return AuthenticationResponse.builder()
                     .user(userRegisterResponse)
                     .accessToken(newAccessToken)
-                    .refreshToken(newRefreshToken)
                     .build();
         }
+        throw new AppException(ErrorCode.UNAUTHENTICATED);
+    }
+
+    private String getRefreshTokenFromCookie(HttpServletRequest request) {
+        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (jakarta.servlet.http.Cookie cookie : cookies) {
+                if ("refreshToken".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
         return null;
+    }
+
+    private void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60) // 7 days
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     private String verifyToken(String token) {
@@ -185,8 +206,7 @@ public class AuthenticationService {
 
                 boolean matched = passwordEncoder.matches(
                         changePassRequest.getPassword(),
-                        user.getPassword()
-                );
+                        user.getPassword());
 
                 if (!matched) {
                     throw new AppException(ErrorCode.PASSWORD_WRONG);
@@ -212,9 +232,10 @@ public class AuthenticationService {
     public boolean checkOTPRegister(String otp, String email, OtpStatus status) {
         boolean check = emailService.checkOTP(otp, email);
         if (check) {
-            if (status == OtpStatus.REGISTER){
+            if (status == OtpStatus.REGISTER) {
                 UserEntity user = userRepository.findByEmail(email).orElse(null);
-                if (user == null) throw new AppException(ErrorCode.USER_NOT_EXISTED);
+                if (user == null)
+                    throw new AppException(ErrorCode.USER_NOT_EXISTED);
 
                 user.setStatus(true);
                 userRepository.save(user);
@@ -226,7 +247,8 @@ public class AuthenticationService {
 
     public boolean sendOtp(String email) {
         UserEntity user = userRepository.findByEmail(email).orElse(null);
-        if (user == null) throw new AppException(ErrorCode.USER_NOT_EXISTED);
+        if (user == null)
+            throw new AppException(ErrorCode.USER_NOT_EXISTED);
         emailService.sendOtp(email);
         return true;
     }

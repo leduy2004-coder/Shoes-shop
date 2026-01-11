@@ -46,8 +46,7 @@ public class ReviewService {
     ProfileClient profileClient;
 
     public PageResponse<ReviewResponse> getReviewByProduct(
-            int page, int size, String sort, String productId
-    ) {
+            int page, int size, String sort, String productId) {
         if (!productRepository.existsById(productId)) {
             throw new AppException(ErrorCode.PRODUCT_NOT_EXISTED);
         }
@@ -66,8 +65,7 @@ public class ReviewService {
                 p.getSize(),
                 p.getTotalElements(),
                 p.getTotalPages(),
-                items
-        );
+                items);
     }
 
     public ReviewResponse create(ReviewRequest request) {
@@ -75,7 +73,7 @@ public class ReviewService {
         if (request.getProductId() == null || request.getProductId().isBlank()) {
             throw new AppException(ErrorCode.PRODUCT_NOT_EXISTED);
         }
-        
+
         // Validate rating
         if (request.getRating() < 1 || request.getRating() > 5) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
@@ -91,64 +89,7 @@ public class ReviewService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // Get all completed orders of user to count purchased variants of this product
-        List<PurchaseOrderEntity> completedOrders = purchaseOrderRepository.findByUserIdAndStatus(userId, true, 
-                org.springframework.data.domain.Pageable.unpaged()).getContent();
-        
-        if (completedOrders.isEmpty()) {
-            throw new AppException(ErrorCode.ORDER_NOT_COMPLETED);
-        }
-        
-        // Get all variantSizeIds from all completed orders
-        List<String> allPurchasedVariantSizeIds = completedOrders.stream()
-                .flatMap(o -> o.getVariantIds() != null ? o.getVariantIds().stream() : java.util.stream.Stream.empty())
-                .distinct()
-                .toList();
-        
-        if (allPurchasedVariantSizeIds.isEmpty()) {
-            throw new AppException(ErrorCode.ORDER_DOES_NOT_CONTAIN_PRODUCT);
-        }
-        
-        // Get all variantSizes purchased
-        List<VariantSizeEntity> allPurchasedVariantSizes = variantSizeRepository.findAllById(allPurchasedVariantSizeIds);
-        
-        // Get all variantIds from variantSizes
-        List<String> allPurchasedVariantIds = allPurchasedVariantSizes.stream()
-                .map(VariantSizeEntity::getVariantId)
-                .distinct()
-                .toList();
-        
-        // Get all variants
-        List<VariantEntity> allPurchasedVariants = variantRepository.findAllById(allPurchasedVariantIds);
-        
-        // Filter variantSizes that belong to this product
-        List<String> purchasedVariantSizeIdsOfProduct = allPurchasedVariantSizes.stream()
-                .filter(vs -> {
-                    VariantEntity variant = allPurchasedVariants.stream()
-                            .filter(v -> v.getId().equals(vs.getVariantId()))
-                            .findFirst()
-                            .orElse(null);
-                    return variant != null && variant.getProductId().equals(product.getId());
-                })
-                .map(VariantSizeEntity::getId)
-                .distinct()
-                .toList();
-        
-        // Check if user has purchased any variant of this product
-        if (purchasedVariantSizeIdsOfProduct.isEmpty()) {
-            throw new AppException(ErrorCode.ORDER_DOES_NOT_CONTAIN_PRODUCT);
-        }
-        
-        // Count how many variantSizes of this product user has purchased
-        long purchasedVariantCount = purchasedVariantSizeIdsOfProduct.size();
-        
-        // Count how many reviews user has already made for this product
-        long existingReviewCount = reviewRepository.countByUserIdAndProductId(userId, product.getId());
-        
-        // Check if user has reached the limit (can only review as many times as variantSizes purchased)
-        if (existingReviewCount >= purchasedVariantCount) {
-            throw new AppException(ErrorCode.REVIEW_ALREADY_EXISTS);
-        }
+        validateReviewEligibility(userId, product.getId());
 
         // Create review
         ReviewEntity entity = ReviewEntity.builder()
@@ -178,6 +119,87 @@ public class ReviewService {
 
         reviewRepository.deleteById(reviewId);
         updateAverageRating(review.getProductId());
+    }
+
+    public boolean checkReviewEligibility(String productId) {
+        String userId = GetInfo.getLoggedInUserName();
+        if (userId == null || userId.isBlank()) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        if (!productRepository.existsById(productId)) {
+            return false;
+        }
+
+        try {
+            validateReviewEligibility(userId, productId);
+            return true;
+        } catch (AppException e) {
+            return false;
+        }
+    }
+
+    private void validateReviewEligibility(String userId, String productId) {
+        // Get all completed orders of user to count purchased variants of this product
+        List<PurchaseOrderEntity> completedOrders = purchaseOrderRepository.findByUserIdAndStatus(userId, true,
+                org.springframework.data.domain.Pageable.unpaged()).getContent();
+
+        if (completedOrders.isEmpty()) {
+            throw new AppException(ErrorCode.ORDER_NOT_COMPLETED);
+        }
+
+        // Get all variantSizeIds from all completed orders
+        List<String> allPurchasedVariantSizeIds = completedOrders.stream()
+                .flatMap(o -> o.getVariantIds() != null ? o.getVariantIds().stream() : java.util.stream.Stream.empty())
+                .distinct()
+                .toList();
+
+        if (allPurchasedVariantSizeIds.isEmpty()) {
+            throw new AppException(ErrorCode.ORDER_DOES_NOT_CONTAIN_PRODUCT);
+        }
+
+        // Get all variantSizes purchased
+        List<VariantSizeEntity> allPurchasedVariantSizes = variantSizeRepository
+                .findAllById(allPurchasedVariantSizeIds);
+
+        // Get all variantIds from variantSizes
+        List<String> allPurchasedVariantIds = allPurchasedVariantSizes.stream()
+                .map(VariantSizeEntity::getVariantId)
+                .distinct()
+                .toList();
+
+        // Get all variants
+        List<VariantEntity> allPurchasedVariants = variantRepository.findAllById(allPurchasedVariantIds);
+
+        // Filter variantSizes that belong to this product
+        List<String> purchasedVariantSizeIdsOfProduct = allPurchasedVariantSizes.stream()
+                .filter(vs -> {
+                    VariantEntity variant = allPurchasedVariants.stream()
+                            .filter(v -> v.getId().equals(vs.getVariantId()))
+                            .findFirst()
+                            .orElse(null);
+                    return variant != null && variant.getProductId().equals(productId);
+                })
+                .map(VariantSizeEntity::getId)
+                .distinct()
+                .toList();
+
+        // Check if user has purchased any variant of this product
+        if (purchasedVariantSizeIdsOfProduct.isEmpty()) {
+            throw new AppException(ErrorCode.ORDER_DOES_NOT_CONTAIN_PRODUCT);
+        }
+
+        // Count how many variantSizes of this product user has purchased
+        long purchasedVariantCount = purchasedVariantSizeIdsOfProduct.size();
+
+        // Count how many reviews user has already made for this product
+        long existingReviewCount = reviewRepository.countByUserIdAndProductId(userId, productId);
+
+        // Check if user has reached the limit (can only review as many times as
+        // variantSizes purchased)
+        if (existingReviewCount >= purchasedVariantCount) {
+            throw new AppException(ErrorCode.REVIEW_ALREADY_EXISTS);
+        }
     }
 
     // ------------ helpers ------------
@@ -213,7 +235,8 @@ public class ReviewService {
         String[] parts = sort.split(",", 2);
         String field = parts[0].trim();
         Sort.Direction dir = (parts.length > 1 && "asc".equalsIgnoreCase(parts[1].trim()))
-                ? Sort.Direction.ASC : Sort.Direction.DESC;
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
 
         return switch (field) {
             case "createdDate", "rating" -> Sort.by(dir, field);

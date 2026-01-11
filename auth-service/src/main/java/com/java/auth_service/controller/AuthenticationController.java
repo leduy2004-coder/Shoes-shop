@@ -10,6 +10,7 @@ import com.java.auth_service.dto.request.VerifyAccount;
 import com.java.auth_service.dto.response.AuthenticationResponse;
 import com.java.auth_service.service.OAuth2UserService;
 import com.java.auth_service.service.security.AuthenticationService;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AccessLevel;
@@ -19,8 +20,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.io.IOException;
 
 @RestController
 @RequiredArgsConstructor
@@ -32,33 +31,33 @@ public class AuthenticationController {
 
     @PostMapping("/register")
     public ApiResponse<Boolean> register(
-            @RequestBody UserRequest request
-    ) {
+            @RequestBody UserRequest request) {
         return ApiResponse.<Boolean>builder().result(service.register(request)).build();
     }
 
     @PostMapping("/login")
     public ApiResponse<AuthenticationResponse> authenticate(
-            @RequestBody AuthenticationRequest request
-    ) {
-        return ApiResponse.<AuthenticationResponse>builder().result(service.authenticate(request)).build();
+            @RequestBody AuthenticationRequest request,
+            HttpServletResponse response) {
+        return ApiResponse.<AuthenticationResponse>builder().result(service.authenticate(request, response)).build();
     }
+
     @PostMapping("/introspect")
     ApiResponse<IntrospectResponse> introspect(@RequestBody IntrospectRequest request) {
         var result = service.introspect(request);
         return ApiResponse.<IntrospectResponse>builder().result(result).build();
     }
+
     @PostMapping("/refresh")
-    public ApiResponse<AuthenticationResponse> refreshToken(
-            HttpServletRequest request,
-            HttpServletResponse response
-    ) throws IOException {
+    public ApiResponse<AuthenticationResponse> refreshToken(HttpServletRequest request, HttpServletResponse response) {
         return ApiResponse.<AuthenticationResponse>builder().result(service.refreshToken(request, response)).build();
     }
+
     @PostMapping("/change-pass")
     public ApiResponse<Boolean> changePassForget(@RequestBody ChangePassRequest request) {
         return ApiResponse.<Boolean>builder().result(service.changePassword(request)).build();
     }
+
     @PostMapping("/email/verify-account")
     public ApiResponse<Boolean> verifyAccount(@RequestBody VerifyAccount request) {
         Boolean check = service.checkOTPRegister(request.getOtp(), request.getEmail(), request.getStatus());
@@ -71,8 +70,10 @@ public class AuthenticationController {
     }
 
     @PostMapping("/login/oauth2")
-    public ApiResponse<AuthenticationResponse> outboundAuthenticate(@RequestParam("code") String code){
-        var result = oAuth2UserService.loginGoogle(code);
+    public ApiResponse<AuthenticationResponse> outboundAuthenticate(@RequestParam("code") String code,
+            HttpServletResponse response) {
+        var result = oAuth2UserService.loginGoogle(code, response);
         return ApiResponse.<AuthenticationResponse>builder().result(result).build();
     }
+
 }

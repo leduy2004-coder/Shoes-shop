@@ -1,6 +1,7 @@
 package com.java.shoes_service.entity.order;
 
 import com.java.shoes_service.entity.common.BaseEntity;
+import com.java.shoes_service.utility.OrderStatus;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,5 +28,5 @@ public class PurchaseOrderEntity extends BaseEntity {
     String couponCode; // Mã coupon đã sử dụng (nếu có)
     Integer discountPercent; // Phần trăm giảm giá từ coupon (nếu có)
     OrderAddress address; // Địa chỉ giao hàng (lưu trực tiếp thay vì addressId)
-    Boolean status;
+    OrderStatus status;
 }

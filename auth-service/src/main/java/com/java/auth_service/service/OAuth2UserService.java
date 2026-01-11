@@ -12,6 +12,7 @@ import com.java.auth_service.repository.feignClient.GoogleIdentityClient;
 import com.java.auth_service.repository.feignClient.GoogleUserInfoClient;
 import com.java.auth_service.service.impl.JwtService;
 import com.java.auth_service.service.redis.TokenRedisService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -26,6 +27,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 
 @Service
 @RequiredArgsConstructor
@@ -56,7 +59,8 @@ public class OAuth2UserService {
     static final String GRANT_TYPE = "authorization_code";
 
     // ===================== LOGIN GOOGLE =====================
-    public AuthenticationResponse loginGoogle(String code) {
+    // ===================== LOGIN GOOGLE =====================
+    public AuthenticationResponse loginGoogle(String code, HttpServletResponse response) {
 
         String accessToken = exchangeGoogleToken(code);
 
@@ -64,12 +68,13 @@ public class OAuth2UserService {
 
         UserEntity user = loadOrCreateGoogleUser(googleUser);
 
-        return loginOauth2(user);
+        return loginOauth2(user, response);
     }
 
     // ===================== GOOGLE TOKEN =====================
     private String exchangeGoogleToken(String code) {
-        // Decode URL encoded code if needed (Spring usually does this automatically, but ensure it's decoded)
+        // Decode URL encoded code if needed (Spring usually does this automatically,
+        // but ensure it's decoded)
         String decodedCode = code;
         try {
             // Try to decode - if it's already decoded, this will return the same value
@@ -77,21 +82,20 @@ public class OAuth2UserService {
         } catch (Exception e) {
             log.warn("Failed to decode code, using original: {}", e.getMessage());
         }
-        
+
         log.info("Original code: {}", code);
         log.info("Decoded code: {}", decodedCode);
         log.info("Redirect URI: {}", redirectUri);
         log.info("Client ID: {}", clientId);
-        
+
         Map<String, String> request = new HashMap<>();
         request.put("code", decodedCode);
         request.put("client_id", clientId);
         request.put("client_secret", clientSecret);
         request.put("redirect_uri", redirectUri);
         request.put("grant_type", GRANT_TYPE);
-        
-        ExchangeTokenResponse.ExchangeTokenGoogle response =
-                googleIdentityClient.exchangeToken(request);
+
+        ExchangeTokenResponse.ExchangeTokenGoogle response = googleIdentityClient.exchangeToken(request);
 
         log.info("Token exchange successful");
         return response.getAccessToken();
@@ -120,24 +124,37 @@ public class OAuth2UserService {
                 .role(role)
                 .build();
 
-
         newUser = userRepository.save(newUser);
 
         return newUser;
     }
 
     // ===================== JWT =====================
-    private AuthenticationResponse loginOauth2(UserEntity user) {
+    // ===================== JWT =====================
+    private AuthenticationResponse loginOauth2(UserEntity user, HttpServletResponse response) {
 
         String accessToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
         tokenRedisService.saveRefreshToken(user.getId(), refreshToken);
+
+        // Set cookie
+        setRefreshTokenCookie(response, refreshToken);
+
         UserRegisterResponse userRegisterResponse = modelMapper.map(user, UserRegisterResponse.class);
         return AuthenticationResponse.builder()
                 .accessToken(accessToken)
-                .refreshToken(refreshToken)
                 .user(userRegisterResponse)
                 .build();
+    }
+
+    private void setRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60) // 7 days
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }
